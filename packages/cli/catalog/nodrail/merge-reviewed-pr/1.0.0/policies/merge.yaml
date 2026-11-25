@@ -1,0 +1,13 @@
+- required_engine_version: 3
+
+# The merger may merge in your repository. The gate in review.yaml decides
+# when: until the checkers pass, a merge is denied with what is missing. To
+# keep merging for people only, override this rule's effect with deny in a
+# file of your own.
+- rule: Merge reviewed pull requests
+  id: merge-reviewed
+  agent: merger
+  tool: github
+  operation: pr.merge
+  resource: { kind: repository, match: exact, value: { binding: repository } }
+  effect: allow

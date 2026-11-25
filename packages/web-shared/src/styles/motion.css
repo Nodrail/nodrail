@@ -1,0 +1,59 @@
+/*
+ * Lists that arrive item by item: put `stagger` on the list, and its first
+ * twelve children rise in turn, 30 ms apart; later ones arrive with the
+ * twelfth. Stops under prefers-reduced-motion like everything else.
+ */
+@utility stagger {
+  & > * {
+    animation: var(--animate-rise);
+  }
+  & > :nth-child(2) {
+    animation-delay: 30ms;
+  }
+  & > :nth-child(3) {
+    animation-delay: 60ms;
+  }
+  & > :nth-child(4) {
+    animation-delay: 90ms;
+  }
+  & > :nth-child(5) {
+    animation-delay: 120ms;
+  }
+  & > :nth-child(6) {
+    animation-delay: 150ms;
+  }
+  & > :nth-child(7) {
+    animation-delay: 180ms;
+  }
+  & > :nth-child(8) {
+    animation-delay: 210ms;
+  }
+  & > :nth-child(9) {
+    animation-delay: 240ms;
+  }
+  & > :nth-child(10) {
+    animation-delay: 270ms;
+  }
+  & > :nth-child(11) {
+    animation-delay: 300ms;
+  }
+  & > :nth-child(12) {
+    animation-delay: 330ms;
+  }
+  & > :nth-child(n + 13) {
+    animation-delay: 330ms;
+  }
+}
+
+/* A shimmering placeholder while content loads (with Skeleton). */
+@utility shimmer {
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(255 255 255 / 55%) 50%,
+      transparent 100%
+    )
+    var(--muted);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}

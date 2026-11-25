@@ -1,0 +1,3 @@
+tests/fixtures/
+# Byte-for-byte output of nodrail 0.3.2: formatting would break contracts-unchanged.test.ts.
+../../packages/cli/tests/fixtures/unchanged/

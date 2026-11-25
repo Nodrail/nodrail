@@ -1,0 +1,271 @@
+/* Brand palette. Components should use the semantic tokens below. */
+:root {
+  --ink: #172925;
+  --ivory: #f5f3eb;
+  --lime: #d5f66b;
+  --forest: #35614c;
+  --sage: #53665e;
+  --mist: #e9ede3;
+  --line: #d9ddd3;
+  --line-strong: #c9d0c3;
+  --violet: #5a4a72;
+  --violet-soft: #f0ebf7;
+}
+
+/* Light only: there is no dark theme, so browsers draw light controls. */
+:root {
+  color-scheme: light;
+}
+
+/*
+ * The public site (its components in src/features/marketing/components/kit
+ * use them as `bg-on-ink-fill`, `border-site-rule`…). Colours the brand
+ * palette doesn't have, named for where they go. The site's phone layout
+ * uses the product's breakpoint: `(width < 781px)`, see `phone:` below.
+ */
+:root {
+  /* Quiet text on the dark ink bands. 9:1 or more on --ink. */
+  --site-on-ink-muted: #c9d1c6;
+  /* The rule above each step on the tinted home sections. */
+  --site-rule: #bfccbc;
+  /* The email field on the lime band: its edge and its fill. */
+  --site-lime-edge: #9eb948;
+  --site-lime-field: #f9ffed;
+  /* Panels and code on the dark bands: ivory over ink. */
+  --site-on-ink-fill: color-mix(in srgb, var(--ivory) 6%, transparent);
+  --site-on-ink-line: color-mix(in srgb, var(--ivory) 18%, transparent);
+  /* Shadows, from soft to raised. */
+  --site-shadow-soft: 0 20px 45px color-mix(in srgb, var(--ink) 6%, transparent);
+  --site-shadow: 0 16px 40px color-mix(in srgb, var(--ink) 10%, transparent);
+  --site-shadow-raised: 0 20px 45px
+    color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+/* shadcn/ui semantic tokens */
+:root {
+  --background: var(--ivory);
+  --foreground: var(--ink);
+  --card: white;
+  --card-foreground: var(--ink);
+  --popover: white;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--ivory);
+  --secondary: var(--lime);
+  --secondary-foreground: var(--ink);
+  --muted: var(--mist);
+  --muted-foreground: var(--sage);
+  --accent: var(--mist);
+  --accent-foreground: var(--ink);
+  --destructive: #a9342a;
+  --warning: #a76c26;
+  --border: var(--line);
+  --input: var(--line);
+  /* Control borders (inputs, selects, checkboxes): 3:1 or more on white and
+     on both backgrounds, as non-text contrast asks (tests/design-tokens). */
+  --input-strong: #7f8c85;
+  --ring: var(--forest);
+  --radius: 0.5rem;
+}
+
+/*
+ * The signed-in product: the same semantic tokens, tuned for dense screens.
+ * Components use bg-background, text-muted-foreground, border-border and so
+ * on everywhere; inside the product they take these values.
+ */
+[data-surface="product"] {
+  --background: #f7f8f5;
+  --foreground: var(--ink);
+  --body: #273b32;
+  --muted: #f0f2ee;
+  /* 4.7:1 or more on every product background, the sidebar and selected rows included. */
+  --muted-foreground: #5c6a62;
+  --accent: #eeeee3;
+  --border: #e4e8e1;
+  --input: #cfd9cb;
+  --destructive: #a43f35;
+  --sidebar: var(--ivory);
+  --selected: #e6eddd;
+}
+
+/* Status tones: a strong colour for text and icons, a soft one for fills. */
+:root {
+  --body: var(--ink);
+  --sidebar: var(--ivory);
+  --selected: var(--mist);
+  --success: var(--forest);
+  --success-soft: #ecf5d9;
+  --warning-soft: #fff4e4;
+  --warning-strong: #80531d;
+  --danger-soft: #fbebe9;
+  --info: #3c5a6e;
+  --info-soft: #e9f0f5;
+  --highlight: #e8f7bd;
+  /* Gates and budgets, where rules use the tones above (the YAML editor). */
+  --gate: #5b4bc4;
+  --gate-soft: #efedfb;
+  --budget: var(--info);
+  --budget-soft: var(--info-soft);
+}
+
+@theme static {
+  --font-sans: Inter, Arial, sans-serif;
+  --font-display: Manrope, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/*
+ * Dense product text sizes. No `--text-*--line-height` on purpose: these set
+ * font-size only, so line-height stays whatever the element inherits or sets.
+ * Register new names in `src/lib/utils.ts` too, so cn() merges them as sizes.
+ */
+@theme {
+  /* 24px: the one page title (PageHeader, the sign-in card). */
+  --text-display: 1.5rem;
+  /* 24px: a big figure in a tile or an Insights section. */
+  --text-figure: 1.5rem;
+  /* 18px: dialog and sheet titles, a stand-alone empty state. */
+  --text-heading: 1.125rem;
+  /* 15px: card and section titles. */
+  --text-title: 0.9375rem;
+  /* 13px: the default for dense product UI: tables, menus, notes, controls. */
+  --text-ui: 0.8125rem;
+  /* 11px: eyebrows, counts and small badges. */
+  --text-micro: 0.6875rem;
+
+  /* Display headings are drawn tight; uppercase labels open up. */
+  --tracking-display: -0.03em;
+  --tracking-label: 0.06em;
+}
+
+/*
+ * The public site's two-column layouts fold at 1100px and narrower. Declared
+ * before `phone:`, because variants apply in the order they are declared: a
+ * phone is also narrow, and its `phone:` value must win.
+ */
+@custom-variant narrow (@media (width <= 1100px));
+@custom-variant roomy (@media (width >= 1101px));
+/*
+ * Phones are 780px and narrower. `phone:` is `width < 781px` and `wide:` its
+ * complement, so a 780px-wide window is a phone and none falls in neither
+ * (Tailwind's `max-[780px]:` would be `width < 780px`). The shell's JavaScript
+ * uses the same query: `phoneMedia` in src/components/app/styles.ts.
+ */
+@custom-variant phone (@media (width < 781px));
+@custom-variant wide (@media (width >= 781px));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-strong: var(--input-strong);
+  --color-ring: var(--ring);
+  --color-body: var(--body);
+  --color-sidebar: var(--sidebar);
+  --color-selected: var(--selected);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-strong: var(--warning-strong);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-highlight: var(--highlight);
+  --color-gate: var(--gate);
+  --color-gate-soft: var(--gate-soft);
+  --color-budget: var(--budget);
+  --color-budget-soft: var(--budget-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-ink: var(--ink);
+  --color-lime: var(--lime);
+  --color-forest: var(--forest);
+  --color-ivory: var(--ivory);
+  --color-sage: var(--sage);
+  --color-mist: var(--mist);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  /* The public site's extra colors (see --site-* above). */
+  --color-on-ink-muted: var(--site-on-ink-muted);
+  --color-on-ink-fill: var(--site-on-ink-fill);
+  --color-on-ink-line: var(--site-on-ink-line);
+  --color-site-rule: var(--site-rule);
+  --color-lime-edge: var(--site-lime-edge);
+  --color-lime-field: var(--site-lime-field);
+  --shadow-site-soft: var(--site-shadow-soft);
+  --shadow-site: var(--site-shadow);
+  --shadow-site-raised: var(--site-shadow-raised);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+}
+
+/*
+ * Two surface radii in the product: `rounded-xl` (16px) for panels and cards
+ * that sit on the page, `rounded-lg` (12px) for boxes inside them (callouts,
+ * list rows, tiles in a card). Controls keep `rounded-md`.
+ */
+
+/*
+ * Motion. Enter and exit use tw-animate-css (animate-in fade-in-0
+ * slide-in-from-bottom-1 duration-200). These cover what it doesn't. Every
+ * animation and transition stops under prefers-reduced-motion (base.css).
+ */
+@theme {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-pop: pop 240ms var(--ease-out-soft);
+  --animate-pulse-dot: pulse-dot 1.2s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-rise: rise 320ms var(--ease-out-soft) both;
+
+  @keyframes pop {
+    0% {
+      transform: scale(0.85);
+    }
+    60% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+}

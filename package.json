@@ -1,0 +1,23 @@
+{
+  "name": "nodrail-server",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @nodrail/web dev",
+    "build": "pnpm --filter @nodrail/web build",
+    "start": "pnpm --filter @nodrail/web start",
+    "check": "pnpm --filter @nodrail/web check",
+    "lint": "pnpm --filter @nodrail/web lint",
+    "test": "pnpm --filter @nodrail/web test",
+    "test:backend": "pnpm --filter @nodrail/web test:backend",
+    "lint:tools": "oxlint -c .oxlintrc.json packages/agent-plugins/scripts packages/cli/scripts packages/mcp/scripts"
+  },
+  "devDependencies": {
+    "oxlint": "^1.93.0"
+  }
+}

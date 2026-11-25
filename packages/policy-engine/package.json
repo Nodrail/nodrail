@@ -1,0 +1,157 @@
+{
+  "name": "@nodrail/policy-engine",
+  "version": "0.8.0",
+  "description": "The open Nodrail policy engine. Compile, test and evaluate rules locally; it decides allow or deny for every agent action on the host. Includes the CLI, TypeScript evaluator and local hook.",
+  "keywords": [
+    "ai",
+    "agents",
+    "ai-agents",
+    "policy",
+    "policy-engine",
+    "control-plane",
+    "guardrails",
+    "governance",
+    "claude-code",
+    "codex",
+    "copilot",
+    "mcp",
+    "yaml"
+  ],
+  "homepage": "https://github.com/Nodrail/nodrail-js/tree/main/packages/policy-engine#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nodrail/nodrail-js.git",
+    "directory": "packages/policy-engine"
+  },
+  "bugs": {
+    "url": "https://github.com/Nodrail/nodrail-js/issues",
+    "email": "hello@nodrail.com"
+  },
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./protocol": "./src/protocol.ts",
+    "./simulator": "./src/simulator.ts",
+    "./yaml": "./src/yaml.ts",
+    "./compile": "./src/compile.ts",
+    "./actions": "./src/actions.ts",
+    "./receipts": "./src/receipts.ts",
+    "./hook-runs": "./src/hook-runs.ts",
+    "./command-line": "./src/command-line.ts",
+    "./contracts": "./src/shapes/index.ts",
+    "./contract-values": "./src/shapes/values.ts",
+    "./shapes": "./src/shapes/index.ts",
+    "./files": "./src/files/index.ts",
+    "./revision": "./src/revision.ts",
+    "./ledger": "./src/run-ledger.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "lint": "oxlint -c ../../.oxlintrc.json --type-aware src tests examples",
+    "build": "node scripts/build.mjs && tsc -p tsconfig.build.json && node scripts/declarations.mjs dist",
+    "simulate": "tsx examples/simulate.ts examples/policy.json",
+    "test": "vitest run --coverage",
+    "verify": "pnpm check && pnpm lint && pnpm test && pnpm test:pack",
+    "test:pack": "node scripts/verify-pack.mjs",
+    "rules": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "canonicalize": "^5.1.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
+    "esbuild": "^0.28.2",
+    "fast-check": "^4.10.2",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2007",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "examples",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./protocol": {
+        "types": "./dist/protocol.d.ts",
+        "default": "./dist/protocol.js"
+      },
+      "./simulator": {
+        "types": "./dist/simulator.d.ts",
+        "default": "./dist/simulator.js"
+      },
+      "./yaml": {
+        "types": "./dist/yaml.d.ts",
+        "default": "./dist/yaml.js"
+      },
+      "./compile": {
+        "types": "./dist/compile.d.ts",
+        "default": "./dist/compile.js"
+      },
+      "./actions": {
+        "types": "./dist/actions.d.ts",
+        "default": "./dist/actions.js"
+      },
+      "./receipts": {
+        "types": "./dist/receipts.d.ts",
+        "default": "./dist/receipts.js"
+      },
+      "./hook-runs": {
+        "types": "./dist/hook-runs.d.ts",
+        "default": "./dist/hook-runs.js"
+      },
+      "./command-line": {
+        "types": "./dist/command-line.d.ts",
+        "default": "./dist/command-line.js"
+      },
+      "./contracts": {
+        "types": "./dist/shapes/index.d.ts",
+        "default": "./dist/shapes/index.js"
+      },
+      "./contract-values": {
+        "types": "./dist/shapes/values.d.ts",
+        "default": "./dist/shapes/values.js"
+      },
+      "./shapes": {
+        "types": "./dist/shapes/index.d.ts",
+        "default": "./dist/shapes/index.js"
+      },
+      "./files": {
+        "types": "./dist/files/index.d.ts",
+        "default": "./dist/files/index.js"
+      },
+      "./revision": {
+        "types": "./dist/revision.d.ts",
+        "default": "./dist/revision.js"
+      },
+      "./ledger": {
+        "types": "./dist/run-ledger.d.ts",
+        "default": "./dist/run-ledger.js"
+      }
+    },
+    "bin": {
+      "nodrail-policy": "./dist/cli.js"
+    },
+    "access": "public",
+    "provenance": true
+  }
+}

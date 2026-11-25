@@ -1,0 +1,111 @@
+@layer base {
+  /* No motion for people who asked for none: one rule for the whole site. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* shadcn's base: a border with no colour of its own is the border token. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The element a tour step is about, set by the tour on any element. */
+  [data-tour-active] {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+    transition: outline-offset 150ms ease-out;
+  }
+}
+/* The product's sticky top bar (56px) never covers what takes focus. */
+html:has([data-slot="topbar"]) {
+  scroll-padding-top: 72px;
+}
+
+/*
+ * Stacked phone tables (DataTable): each cell names its column above its
+ * value. Read once: screen readers get the column from the heading, so the
+ * label's alternative text is empty where browsers support it.
+ */
+@media (width < 781px) {
+  [data-slot="data-table"] td[data-label]::before {
+    content: attr(data-label);
+    content: attr(data-label) / "";
+    display: block;
+    margin-bottom: 1px;
+    color: var(--muted-foreground);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  top: -80px;
+  left: 20px;
+  z-index: 10;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 12px;
+  outline-offset: 5px;
+}
+.skip-link:focus {
+  top: 10px;
+}
+.skip-link:focus-visible {
+  outline: 3px solid var(--ring);
+}
+
+.consent-banner {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 720px;
+  margin-inline: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--ink) 14%, transparent);
+  font-size: 13px;
+}
+
+.consent-banner p {
+  flex: 1 1 280px;
+  margin: 0;
+}
+
+.consent-banner a {
+  text-decoration: underline;
+}
+
+.consent-banner div {
+  display: flex;
+  gap: 8px;
+}

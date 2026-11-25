@@ -1,0 +1,38 @@
+@font-face {
+  font-family: Manrope;
+  src: url("/fonts/Manrope-Bold.woff2") format("woff2");
+  font-weight: 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: Manrope;
+  src: url("/fonts/Manrope-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Inter;
+  src: url("/fonts/Inter-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Inter;
+  src: url("/fonts/Inter-Medium.woff2") format("woff2");
+  font-weight: 500 800;
+  font-display: swap;
+}
+/* JetBrains Mono (OFL), subset to Latin, without coding ligatures, so a
+   command reads exactly as typed. */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Medium.woff2") format("woff2");
+  font-weight: 500 800;
+  font-display: swap;
+}

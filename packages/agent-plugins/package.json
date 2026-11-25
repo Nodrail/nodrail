@@ -1,0 +1,16 @@
+{
+  "name": "@nodrail/agent-plugins",
+  "version": "0.8.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @nodrail/client build && node scripts/build.mjs",
+    "test": "pnpm build && node scripts/check.mjs && vitest run",
+    "check": "node scripts/check.mjs"
+  },
+  "devDependencies": {
+    "@nodrail/client": "workspace:^",
+    "vitest": "^5.1.0"
+  },
+  "license": "Apache-2.0"
+}

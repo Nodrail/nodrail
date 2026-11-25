@@ -1,0 +1,71 @@
+name: nodrail
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      NODRAIL_OWNER_PASSWORD: ${OWNER_PASSWORD:?set OWNER_PASSWORD in .env}
+    volumes:
+      - nodrail-data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d nodrail"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    image: ${NODRAIL_REGISTRY:-ghcr.io/nodrail}/server-migrate:${NODRAIL_VERSION:?set NODRAIL_VERSION in .env}${NODRAIL_MIGRATE_DIGEST:+@${NODRAIL_MIGRATE_DIGEST}}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODRAIL_DEPLOYMENT: self-hosted
+      DATABASE_PLAINTEXT_HOST: postgres
+      MIGRATION_DATABASE_URL: postgres://nodrail_owner:${OWNER_PASSWORD}@postgres:5432/nodrail
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?set APP_DATABASE_PASSWORD in .env}
+      AUTH_DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?set AUTH_DATABASE_PASSWORD in .env}
+
+  app:
+    image: &server-image ${NODRAIL_REGISTRY:-ghcr.io/nodrail}/server:${NODRAIL_VERSION:?set NODRAIL_VERSION in .env}${NODRAIL_SERVER_DIGEST:+@${NODRAIL_SERVER_DIGEST}}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    environment:
+      # The restricted login migrate created: row security applies to it.
+      DATABASE_PLAINTEXT_HOST: postgres
+      DATABASE_URL: postgres://nodrail_app_login:${APP_DATABASE_PASSWORD}@postgres:5432/nodrail
+      AUTH_DATABASE_URL: postgres://nodrail_auth_login:${AUTH_DATABASE_PASSWORD}@postgres:5432/nodrail
+      APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN in .env}
+      AUTH_CLIENT_IP_HEADER: ${AUTH_CLIENT_IP_HEADER:-}
+      SIGNUP_ALLOWLIST: ${SIGNUP_ALLOWLIST:-}
+      SMTP_URL: ${SMTP_URL:-}
+      SMTP_PLAINTEXT_HOST: ${SMTP_PLAINTEXT_HOST:-}
+      NOTIFICATIONS_FROM: ${NOTIFICATIONS_FROM:-}
+      NOTIFICATIONS_SECRET: ${NOTIFICATIONS_SECRET:?set NOTIFICATIONS_SECRET in .env}
+      NODRAIL_DEPLOYMENT: self-hosted
+      NODRAIL_MONTHLY_ACTIONS: ${NODRAIL_MONTHLY_ACTIONS:-}
+      NODRAIL_MONTHLY_STEPS: ${NODRAIL_MONTHLY_STEPS:-}
+
+  scheduler:
+    image: *server-image
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["node", "scripts/schedule.mjs"]
+    healthcheck:
+      disable: true
+    environment:
+      SCHEDULER_URL: http://app:3000
+      SCHEDULER_EVERY_SECONDS: ${SCHEDULER_EVERY_SECONDS:-300}
+      NOTIFICATIONS_SECRET: ${NOTIFICATIONS_SECRET:?set NOTIFICATIONS_SECRET in .env}
+
+volumes:
+  nodrail-data:

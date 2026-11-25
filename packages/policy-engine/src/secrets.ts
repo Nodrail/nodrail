@@ -1,0 +1,221 @@
+/**
+ * Where credentials usually live, by file or folder name. The starter packs
+ * deny reading and searching these, and a command or search pattern that names
+ * one is never judged as a simple, harmless call.
+ */
+export const SECRET_PLACES = [
+  ".env",
+  ".envrc",
+  ".ssh",
+  ".aws",
+  ".gnupg",
+  ".kube",
+  ".docker",
+  "gcloud",
+  ".netrc",
+  ".npmrc",
+  ".pypirc",
+  ".git-credentials",
+  ".pgpass",
+  ".vault-token",
+  "id_rsa",
+  "id_ecdsa",
+  "id_ed25519",
+  // Agents' and Nodrail's own credentials, and a process's environment.
+  ".credentials.json",
+  ".nodrail",
+  "environ",
+  // Key files, by extension.
+  "*.pem",
+  "*.key",
+  "*.p12",
+  "*.pfx",
+] as const;
+
+const secretSet = new Set<string>(SECRET_PLACES);
+
+/**
+ * Credentials that live under a name too common to deny alone: a folder and a
+ * file name that together mean a token.
+ */
+export const SECRET_PAIRS = [
+  { label: "GitHub CLI tokens", parts: [".config", "gh"] },
+  { label: "Codex sign-in", parts: [".codex", "auth.json"] },
+  // A remote URL in git's config can carry a token.
+  { label: "git config", parts: [".git", "config"] },
+] as const;
+
+/**
+ * Whether a described file call reaches a place credentials live, the same way
+ * the starter packs decide. Checked on the machine, with no server.
+ */
+export function reachesSecret(params: Record<string, unknown>) {
+  if (params.reaches_secrets === true) return true;
+  const parts = Array.isArray(params.path_parts)
+    ? params.path_parts.filter(
+        (part): part is string => typeof part === "string",
+      )
+    : [];
+  return (
+    parts.some(isSecretName) ||
+    SECRET_PAIRS.some((pair) =>
+      pair.parts.every((part) => parts.includes(part)),
+    )
+  );
+}
+
+const KEY_EXTENSIONS = new Set(["pem", "key", "p12", "pfx"]);
+
+/**
+ * The names a path part answers to, so a rule naming one form catches them all:
+ * - itself, and its lowercase form: many disks ignore case, so .CLAUDE is
+ *   .claude, even when the folder doesn't exist yet;
+ * - a dot file's base: .env.staging is .env;
+ * - the .env family: .env-prod, .env_test and prod.env are .env;
+ * - key files by extension: server.pem is *.pem.
+ */
+export function nameForms(part: string): string[] {
+  const lower = part.toLowerCase();
+  const forms = new Set([part, lower]);
+  const second = lower.startsWith(".") ? lower.indexOf(".", 1) : -1;
+  if (second > 1) forms.add(lower.slice(0, second));
+  if (/^\.env[._-]/.test(lower) || /.\.env$/.test(lower)) forms.add(".env");
+  const extension = lower.slice(lower.lastIndexOf(".") + 1);
+  if (lower.includes(".") && KEY_EXTENSIONS.has(extension))
+    forms.add(`*.${extension}`);
+  return [...forms];
+}
+
+export const isSecretName = (part: string) =>
+  nameForms(part).some((form) => secretSet.has(form));
+
+const MAX_GLOB = 256;
+const MAX_ALTERNATIVES = 64;
+
+/** {a,b}c → [ac, bc]. Null for unsupported syntax or too many alternatives. */
+export function expandBraces(pattern: string, start = 0): string[] | null {
+  const open = pattern.indexOf("{", start);
+  if (open < 0) return [pattern];
+  const close = pattern.indexOf("}", open);
+  if (close < 0) return [pattern];
+  const inner = pattern.slice(open + 1, close);
+  if (inner.includes("{")) return null;
+  if (!inner.includes(","))
+    return inner.includes("..") ? null : expandBraces(pattern, close + 1);
+  const results: string[] = [];
+  for (const choice of inner.split(",")) {
+    const rest = expandBraces(
+      pattern.slice(0, open) + choice + pattern.slice(close + 1),
+      open + choice.length,
+    );
+    if (!rest) return null;
+    results.push(...rest);
+    if (results.length > MAX_ALTERNATIVES) return null;
+  }
+  return results;
+}
+
+type Token =
+  | { any: true }
+  | { one: true }
+  | { set: string; negate: boolean }
+  | { char: string };
+
+function tokens(pattern: string): Token[] {
+  const result: Token[] = [];
+  for (let at = 0; at < pattern.length; at += 1) {
+    const char = pattern[at] ?? "";
+    if (char === "*") {
+      if (!("any" in (result.at(-1) ?? {}))) result.push({ any: true });
+    } else if (char === "?") result.push({ one: true });
+    else if (char === "[") {
+      const end = pattern.indexOf("]", at + 2);
+      if (end < 0) result.push({ char });
+      else {
+        const body = pattern.slice(at + 1, end);
+        const negate = body.startsWith("!") || body.startsWith("^");
+        result.push({ set: negate ? body.slice(1) : body, negate });
+        at = end;
+      }
+    } else result.push({ char });
+  }
+  return result;
+}
+
+function inSet(set: string, char: string) {
+  for (let at = 0; at < set.length; at += 1) {
+    const low = set[at] ?? "";
+    if (set[at + 1] === "-" && at + 2 < set.length) {
+      const high = set[at + 2] ?? "";
+      if (char >= low && char <= high) return true;
+      at += 2;
+    } else if (char === low) return true;
+  }
+  return false;
+}
+
+/** Whether one pattern token, other than *, matches one character. */
+function fits(token: Token, char: string) {
+  if ("one" in token) return true;
+  if ("set" in token) return inSet(token.set, char) !== token.negate;
+  return "char" in token && token.char === char;
+}
+
+/**
+ * Glob matching for one path part, in time proportional to both lengths:
+ * row[at] says whether the tokens so far match the name's first `at` chars.
+ */
+function matchesPart(pattern: Token[], name: string) {
+  let row = Array.from({ length: name.length + 1 }, (_, at) => at === 0);
+  for (const token of pattern) {
+    const next = Array.from({ length: name.length + 1 }, () => false);
+    // * can match nothing, or one more character than it already did.
+    if ("any" in token)
+      for (let at = 0; at <= name.length; at += 1)
+        next[at] = (row[at] ?? false) || (at > 0 && (next[at - 1] ?? false));
+    else
+      for (let at = 1; at <= name.length; at += 1)
+        next[at] = (row[at - 1] ?? false) && fits(token, name[at - 1] ?? "");
+    row = next;
+  }
+  return row[name.length] ?? false;
+}
+
+/** Compile a segment once, with bounded matching instead of regex backtracking. */
+export function globSegment(segment: string, foldCase = true) {
+  const pattern = tokens(foldCase ? segment.toLowerCase() : segment);
+  return (name: string) =>
+    matchesPart(pattern, foldCase ? name.toLowerCase() : name);
+}
+
+/** Examples of each place, including the forms nameForms recognises. */
+const secretExamples = SECRET_PLACES.flatMap((place) => {
+  if (place.startsWith("*.")) return [`server${place.slice(1)}`];
+  if (place === ".env") return [".env", ".env.local", ".env-prod", "prod.env"];
+  return place.startsWith(".") ? [place, `${place}.local`] : [place];
+});
+
+/**
+ * Whether a file pattern could pick out a place where credentials live: a part
+ * that names one, or a wildcard part that one would match, such as .env*,
+ * *env or {.env,x}. A bare ** walks folders without picking any by name.
+ * Anything too complex to check counts as reaching one.
+ */
+export function globCouldReachSecret(glob: string) {
+  if (glob.length > MAX_GLOB) return true;
+  const alternatives = expandBraces(glob);
+  if (!alternatives) return true;
+  return alternatives.some((alternative) =>
+    alternative
+      .split(/[\\/]/)
+      .filter(Boolean)
+      .some((part) => {
+        // ** walks folders but picks none out by name; the other parts decide.
+        if (part === "**") return false;
+        if (!/[*?[]/.test(part)) return isSecretName(part);
+        // Many disks ignore case, so .E* reaches .env.
+        const pattern = tokens(part.toLowerCase());
+        return secretExamples.some((name) => matchesPart(pattern, name));
+      }),
+  );
+}

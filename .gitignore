@@ -1,0 +1,11 @@
+node_modules/
+.next*/
+dist/
+coverage/
+*.tsbuildinfo
+.env*
+!.env.example
+.DS_Store
+test-results/
+playwright-report/
+packages/agent-plugins/plugins/*/hooks/nodrail-hook.mjs

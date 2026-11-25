@@ -1,0 +1,178 @@
+import Link from "next/link";
+import { TextLink } from "@/components/app/text-link";
+import { CardLinks, EmptyState } from "@/components/app/card";
+import { Button } from "@/components/ui/button";
+import type { ReportDto, ReportWindow } from "@/contracts/v1/reports";
+import { medianLabel, shareLabel, spendLabel } from "../presentation";
+import { Figures, InsightSection, SubHeading } from "./insight-parts";
+import {
+  AgentTable,
+  BudgetTable,
+  CheckTable,
+  GateTable,
+  TopRunsTable,
+} from "./report-tables";
+
+/** How runs start, for a section with none in its window. */
+const runsDocs = (
+  <Button asChild variant="outline">
+    <a href="/docs/runs">How runs work</a>
+  </Button>
+);
+
+/** No runs in the window: what makes them appear, and the first step. */
+function NoRuns({
+  days,
+  hasRules,
+  importHref,
+}: {
+  days: ReportWindow;
+  hasRules: boolean;
+  importHref: string | null;
+}) {
+  return (
+    <EmptyState
+      inline
+      title={`No runs in the last ${days} days`}
+      action={
+        !hasRules && importHref ? (
+          <Button asChild variant="outline">
+            <Link href={importHref}>Import rules</Link>
+          </Button>
+        ) : (
+          runsDocs
+        )
+      }
+    >
+      {hasRules
+        ? "This section shows where gates and budgets hold a run's work. It fills in when an integration sends its intents with a run key and reports the steps its agents take."
+        : "Gates make a run wait for checks, and budgets cap what it spends. Add them to a rules file and import it, then send intents with a run key."}
+    </EmptyState>
+  );
+}
+
+/** Where gates hold work, what is missing then, and which budgets ran over. */
+export function GatesInsight({
+  report,
+  days,
+  base,
+  canImport,
+}: {
+  report: ReportDto;
+  days: ReportWindow;
+  base: string;
+  canImport: boolean;
+}) {
+  const hasRules = report.gates.length + report.budgets.length > 0;
+  return (
+    <InsightSection
+      question="Where do gates and budgets stop work?"
+      description="Runs active in the window, explained against the gates and budgets live now. First pass: runs whose first action at the gate was not held."
+      action={
+        <CardLinks>
+          <TextLink href={`${base}/policies/gates`}>Open gates</TextLink>
+        </CardLinks>
+      }
+    >
+      {report.runs.count === 0 ? (
+        <NoRuns
+          days={days}
+          hasRules={hasRules}
+          importHref={canImport ? `${base}/policies/import` : null}
+        />
+      ) : (
+        <>
+          <Figures
+            figures={[
+              {
+                label: "Passed every gate without a hold",
+                value: shareLabel(report.runs.withoutHold),
+              },
+              {
+                label: "Budget overruns",
+                value: String(
+                  report.budgets.reduce((sum, budget) => sum + budget.hits, 0),
+                ),
+              },
+            ]}
+          />
+          <SubHeading>Gates</SubHeading>
+          <GateTable
+            gates={report.gates}
+            editPath={canImport ? `${base}/policies/gates` : null}
+          />
+          <SubHeading>Budgets</SubHeading>
+          <BudgetTable budgets={report.budgets} base={base} />
+        </>
+      )}
+    </InsightSection>
+  );
+}
+
+/** How agent teams work: checks passing, work coming back, and what it costs. */
+export function TeamsInsight({
+  report,
+  days,
+  base,
+}: {
+  report: ReportDto;
+  days: ReportWindow;
+  base: string;
+}) {
+  const { runs } = report;
+  return (
+    <InsightSection
+      question="How do agent teams work together?"
+      description="A verdict is what the agent reported. Rework loop: a builder working again after a check rejected the work. Spend is what receipts reported."
+      action={
+        <CardLinks>
+          <TextLink href={`${base}/activity?view=runs`}>Open runs</TextLink>
+        </CardLinks>
+      }
+    >
+      {runs.count === 0 ? (
+        <EmptyState
+          inline
+          title={`No runs in the last ${days} days`}
+          action={runsDocs}
+        >
+          This section shows how checks like qa or reviewer pass work, how often
+          it comes back, and what each run costs. It fills in once agents report
+          their steps under a run key.
+        </EmptyState>
+      ) : (
+        <>
+          <Figures
+            figures={[
+              { label: "Runs", value: String(runs.count) },
+              runs.medianSteps === null
+                ? {
+                    label: "Median steps per run",
+                    value: null,
+                    hint: "No steps reported",
+                  }
+                : {
+                    label: "Median steps per run",
+                    value: medianLabel(runs.medianSteps),
+                  },
+              {
+                label: "Rework loops",
+                value: String(runs.reworkLoops),
+                hint: `in ${runs.withRework} of ${runs.count} runs`,
+              },
+              runs.spend.usd > 0 || runs.spend.tokens > 0
+                ? { label: "Spend", value: spendLabel(runs.spend) }
+                : { label: "Spend", value: null, hint: "No spend reported" },
+            ]}
+          />
+          <SubHeading>Checks</SubHeading>
+          <CheckTable checks={report.checks} />
+          <SubHeading>Agents</SubHeading>
+          <AgentTable agents={report.agents} />
+          <SubHeading>Runs that spent most</SubHeading>
+          <TopRunsTable runs={report.topRuns} base={base} />
+        </>
+      )}
+    </InsightSection>
+  );
+}

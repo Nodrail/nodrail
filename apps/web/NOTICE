@@ -1,0 +1,22 @@
+Nodrail server and console
+Copyright The Nodrail contributors
+
+Sharp is licensed under Apache-2.0. The prebuilt sharp-libvips packages
+distributed with Sharp include libvips and other shared libraries. The
+bundles are distributed under LGPL-3.0-or-later. License texts and upstream
+third-party notices are in licenses/ (/usr/share/doc/nodrail/licenses/ in the
+server image).
+
+For Sharp 0.35.5 and the sharp-libvips 1.3.4 bundles in pnpm-lock.yaml, the
+upstream source, dependency versions and build recipes are at:
+  https://github.com/lovell/sharp/tree/v0.35.5
+  https://github.com/lovell/sharp-libvips/tree/v1.3.4
+The shared libraries may be replaced with compatible builds under the
+applicable license terms. These notices apply to those libraries separately
+from the Nodrail source license.
+
+The Inter, Manrope and JetBrains Mono fonts are distributed under the SIL
+Open Font License 1.1. See public/fonts/OFL.txt for their copyright notices
+and license text.
+
+See TRADEMARKS.md for use of Nodrail names, logos and artwork.

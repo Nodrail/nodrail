@@ -1,0 +1,31 @@
+{
+  "path": [
+    "src",
+    "tests",
+    "e2e-app",
+    "scripts",
+    "../../packages/client/src",
+    "../../packages/client/tests",
+    "../../packages/policy-engine/src",
+    "../../packages/policy-engine/tests",
+    "../../packages/policy-engine/examples",
+    "../../packages/cli/src",
+    "../../packages/cli/tests",
+    "../../packages/mcp/src",
+    "../../packages/mcp/tests",
+    "../../packages/web-shared/src",
+    "../../packages/web-shared/e2e"
+  ],
+  "pattern": "**/*.{ts,tsx,mjs,css}",
+  "ignore": [
+    "**/migrations/2000000000000-Core.ts",
+    "**/*.d.ts"
+  ],
+  "minTokens": 45,
+  "minLines": 5,
+  "threshold": 0,
+  "reporters": [
+    "console"
+  ],
+  "gitignore": true
+}

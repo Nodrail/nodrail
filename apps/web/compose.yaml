@@ -1,0 +1,38 @@
+# Local development services. The Postgres passwords here are local fixtures.
+services:
+  # Development data, kept between restarts.
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: nodrail_local_only
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - nodrail-dev-data:/var/lib/postgresql/data
+    healthcheck: &healthcheck
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  # Development SMTP sink. The deployed server can use any SMTP relay.
+  mailpit:
+    image: axllent/mailpit:v1.34.0
+    ports:
+      - "127.0.0.1:55324:8025"
+      - "127.0.0.1:55325:1025"
+
+  # Empty when created; shared by every test run while it serves, never
+  # recreated by one (tests/support/local-stack.ts).
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: nodrail_local_only
+    ports:
+      - "127.0.0.1:54330:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck: *healthcheck
+
+volumes:
+  nodrail-dev-data:

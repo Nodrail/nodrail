@@ -1,0 +1,39 @@
+{{- if .Values.scheduler.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "nodrail.name" . }}-scheduler
+  labels:
+    {{- include "nodrail.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.scheduler.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 300
+      template:
+        spec:
+          automountServiceAccountToken: false
+          securityContext:
+            {{- include "nodrail.podSecurityContext" . | nindent 12 }}
+          restartPolicy: Never
+          containers:
+            - name: scheduler
+              image: {{ include "nodrail.serverImage" . | quote }}
+              securityContext:
+                {{- include "nodrail.containerSecurityContext" . | nindent 16 }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["node", "scripts/schedule.mjs"]
+              env:
+                - name: SCHEDULER_URL
+                  value: {{ printf "http://%s:%v" (include "nodrail.name" .) .Values.service.port | quote }}
+                - name: NOTIFICATIONS_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.schedulerSecret | quote }}
+                      key: NOTIFICATIONS_SECRET
+{{- end }}

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nodrail.name" . }}
+  labels:
+    {{- include "nodrail.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "nodrail.labels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        {{- include "nodrail.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "nodrail.podSecurityContext" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: server
+          image: {{ include "nodrail.serverImage" . | quote }}
+          securityContext:
+            {{- include "nodrail.containerSecurityContext" . | nindent 12 }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: {{ .Values.appSecret | quote }}
+          env:
+            - name: APP_ORIGIN
+              value: {{ include "nodrail.appOrigin" . | quote }}
+            - name: AUTH_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.appSecret | quote }}
+                  key: AUTH_DATABASE_URL
+            - name: NODRAIL_DEPLOYMENT
+              value: self-hosted
+            - name: NOTIFICATIONS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.schedulerSecret | quote }}
+                  key: NOTIFICATIONS_SECRET
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5

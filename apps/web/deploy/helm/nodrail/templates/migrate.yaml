@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "nodrail.name" . }}-migrate
+  labels:
+    {{- include "nodrail.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.migration.activeDeadlineSeconds }}
+  template:
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "nodrail.podSecurityContext" . | nindent 8 }}
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ include "nodrail.migrationImage" . | quote }}
+          securityContext:
+            {{- include "nodrail.containerSecurityContext" . | nindent 12 }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.migration.existingSecret | quote }}

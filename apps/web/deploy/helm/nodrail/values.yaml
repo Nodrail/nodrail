@@ -1,0 +1,51 @@
+# Public HTTPS origin used in links and by sign-in. HTTP is loopback only.
+# Without ingress, empty defaults to http://localhost:3000 for port-forwarding.
+appOrigin: ""
+replicaCount: 1
+# Pin kubernetes.io/arch for multi-replica Next.js deployments on mixed clusters.
+nodeSelector: {}
+
+image:
+  repository: ghcr.io/nodrail/server
+  # Empty selects Chart.appVersion. Pin the same release for both images.
+  tag: ""
+  # Verified image index digest. Takes precedence over tag when set.
+  digest: ""
+  pullPolicy: IfNotPresent
+migration:
+  repository: ghcr.io/nodrail/server-migrate
+  # Empty follows the server image tag.
+  tag: ""
+  # Verified migration index digest. Takes precedence over tag when set.
+  digest: ""
+  # Must exist before helm install/upgrade. Keys: MIGRATION_DATABASE_URL,
+  # APP_DATABASE_PASSWORD, AUTH_DATABASE_PASSWORD, and optional
+  # APP_DATABASE_USER and DATABASE_CA.
+  existingSecret: nodrail-migrate
+  activeDeadlineSeconds: 300
+
+# Must exist before installation. Keys: DATABASE_URL and AUTH_DATABASE_URL.
+# Optional keys include DATABASE_CA, SMTP_URL and NOTIFICATIONS_FROM.
+appSecret: nodrail-app
+# Existing Secret containing NOTIFICATIONS_SECRET. Shared by app and scheduler.
+schedulerSecret: nodrail-scheduler
+
+# Extra runtime variables for the app, as Kubernetes EnvVar entries.
+# For example: AUTH_CLIENT_IP_HEADER, SIGNUP_ALLOWLIST or NODRAIL_MONTHLY_ACTIONS.
+extraEnv: []
+resources: {}
+
+service:
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  # Standard Kubernetes Ingress TLS entries, each with hosts and secretName.
+  tls: []
+
+scheduler:
+  enabled: true
+  schedule: "*/5 * * * *"

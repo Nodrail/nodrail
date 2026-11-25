@@ -1,0 +1,40 @@
+{{- if .Values.ingress.enabled }}
+{{- $host := required "ingress.host is required with ingress.enabled" .Values.ingress.host }}
+{{- $origin := required "appOrigin is required with ingress.enabled" .Values.appOrigin }}
+{{- $url := urlParse $origin }}
+{{- if ne (lower $url.hostname) (lower $host) }}
+{{- fail "appOrigin must match ingress.host" }}
+{{- end }}
+{{- if and .Values.ingress.tls (ne $url.scheme "https") }}
+{{- fail "appOrigin must use https:// when ingress.tls is configured" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "nodrail.name" . }}
+  labels:
+    {{- include "nodrail.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "nodrail.name" . }}
+                port:
+                  name: http
+{{- end }}

@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./fonts.css";
+@import "./tokens.css";
+@import "./base.css";
+@import "./motion.css";
+
+/* The shared components' classes; each app's own are found from its root. */
+@source "..";

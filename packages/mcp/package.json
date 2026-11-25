@@ -1,0 +1,77 @@
+{
+  "name": "@nodrail/mcp",
+  "version": "0.1.0",
+  "description": "Nodrail as an MCP server: read Activity, runs, Insights and rules from your Nodrail control plane through the management API. Read-only unless you opt in.",
+  "keywords": [
+    "ai",
+    "agents",
+    "ai-agents",
+    "mcp",
+    "model-context-protocol",
+    "control-plane",
+    "governance",
+    "claude-code",
+    "nodrail"
+  ],
+  "homepage": "https://github.com/Nodrail/nodrail-js/tree/main/packages/mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nodrail/nodrail-js.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/Nodrail/nodrail-js/issues",
+    "email": "hello@nodrail.com"
+  },
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "pnpm --filter @nodrail/cli build && node scripts/build.mjs && tsc -p tsconfig.build.json && node ../policy-engine/scripts/declarations.mjs dist",
+    "check": "tsc --noEmit",
+    "lint": "oxlint -c ../../.oxlintrc.json --type-aware -D typescript/no-floating-promises -D typescript/no-misused-promises src tests",
+    "test": "vitest run --coverage",
+    "test:pack": "node scripts/verify-pack.mjs",
+    "verify": "pnpm check && pnpm lint && pnpm test && pnpm test:pack"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@nodrail/cli": "workspace:^",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
+    "esbuild": "^0.28.2",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2007",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "bin": {
+      "nodrail-mcp": "./dist/nodrail-mcp.mjs"
+    },
+    "access": "public",
+    "provenance": true
+  }
+}
