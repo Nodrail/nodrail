@@ -38,6 +38,9 @@ const agentAccess = accessChanged.extend({
   paused_by: text.nullable(),
 });
 const installation = z.object({
+  disconnected: z.boolean(),
+  machine_key: text.nullable(),
+  machine_paused: z.boolean(),
   id,
   name: text,
   environment: environment.omit({ id: true }),
@@ -48,12 +51,19 @@ const installation = z.object({
   last_seen_at: instant.nullable(),
 });
 const agent = z.object({
+  project: id.nullable(),
+  project_name: text.nullable(),
   key: text,
   description: text.nullable(),
   access: agentAccess,
   tools: z.array(text),
 });
-export const agents = pageOf(agent.extend({ installation })).extend({
+export const agents = pageOf(
+  agent.extend({
+    installation,
+    installations: z.array(installation),
+  }),
+).extend({
   summary: z.object({ connected: count, reporting: count, paused: count }),
 });
 export const agentDetail = agent.extend({
@@ -196,6 +206,27 @@ const policyFileIssue = z.object({
   message: text,
 });
 export const policyFilePreview = z.object({
+  pins_current: z.boolean().optional(),
+  catalog_removed: z.array(text).optional(),
+  agent_changes: z
+    .object({
+      added: z.array(text),
+      changed: z.array(text),
+      removed: z.array(text),
+    })
+    .optional(),
+  publishes_policy: z.boolean().optional(),
+  workspace_lock_current: z.boolean().optional(),
+  policy_counts: z
+    .object({ added: count, changed: count, removed: count })
+    .optional(),
+  takeover: z
+    .object({
+      project_id: z.uuid(),
+      hosts: z.array(z.object({ id: z.uuid(), name: text })),
+    })
+    .nullable()
+    .optional(),
   issues: z.array(policyFileIssue),
   warnings: z.array(policyFileIssue),
   policy_revision: count,

@@ -47,14 +47,19 @@ export function resolveNames(
 export function planRunPolicy(
   document: PolicyDocument,
   idFor: (id: string) => string,
-  found: Targets,
+  { found, gateLines }: { found: Targets; gateLines: readonly number[] },
   current: RunPolicy | null,
 ) {
   const issues: Issue[] = [];
   if (document.version === 1)
     return { runPolicy: null, issues, ...diffEntries([], current) };
-  const gates = document.gates.map((gate) => {
-    const { agentId, installationId } = resolveNames(found, gate, 1, issues);
+  const gates = document.gates.map((gate, index) => {
+    const { agentId, installationId } = resolveNames(
+      found,
+      gate,
+      gateLines[index] ?? 1,
+      issues,
+    );
     const id = idFor(gate.id);
     return { ...gate, id, agentKey: agentId, installationName: installationId };
   });

@@ -41,8 +41,14 @@ class PolicyRequestError extends Error {}
 async function requestError(response: Response) {
   if (response.status === 401)
     return new PolicyRequestError("Sign in again, then retry.");
-  const body = (await response.json()) as { error?: { code?: string } };
+  const body = (await response.json()) as {
+    error?: { code?: string; message?: string };
+  };
   switch (body.error?.code) {
+    case "REPOSITORY_CHANGED":
+      return new PolicyRequestError(
+        body.error.message ?? "Reload to review repository ownership.",
+      );
     case "RULE_CHANGED":
       return new PolicyRequestError(
         "The rules changed since this preview. Reload to see them and merge your edits, or preview again.",
@@ -51,6 +57,15 @@ async function requestError(response: Response) {
       return new PolicyRequestError(
         "This file has problems. Preview it again to see them.",
       );
+    case "BUSY":
+      return new PolicyRequestError(
+        "A policy change is in progress. Try again in a moment.",
+      );
+    case "NOT_FOUND":
+      return new PolicyRequestError(
+        "This environment is no longer available. Reload and choose another.",
+      );
+    case "INSUFFICIENT_SCOPE":
     case "FORBIDDEN":
       return new PolicyRequestError(
         "Check your permissions and reload the page before retrying.",
@@ -86,7 +101,7 @@ export async function reviewPolicyFile(
   yaml: string,
 ): Promise<ActionResult<PolicyFilePreviewDto>> {
   try {
-    const { policy_revision, file_digest, ...preview } =
+    const { policy_revision, file_digest, takeover, pins_current, ...preview } =
       policyFilePreview.parse(
         await post(place, { action: "preview", body: { yaml } }),
       );
@@ -96,6 +111,15 @@ export async function reviewPolicyFile(
         ...preview,
         policyRevision: policy_revision,
         fileDigest: file_digest,
+        pinsCurrent: pins_current,
+        ...(takeover
+          ? {
+              takeover: {
+                projectId: takeover.project_id,
+                hosts: takeover.hosts,
+              },
+            }
+          : {}),
       },
     };
   } catch (error) {
@@ -107,6 +131,7 @@ export async function publishPolicyFile(
   place: Place,
   yaml: string,
   preview: Pick<PolicyFilePreviewDto, "policyRevision" | "fileDigest">,
+  reviewedProjectId: string | null,
 ): Promise<ActionResult<PolicyFileResultDto>> {
   try {
     const { policy_revision, ...result } = policyFilePublished.parse(
@@ -116,6 +141,7 @@ export async function publishPolicyFile(
           yaml,
           policy_revision: preview.policyRevision,
           file_digest: preview.fileDigest,
+          reviewed_project_id: reviewedProjectId,
         },
       }),
     );

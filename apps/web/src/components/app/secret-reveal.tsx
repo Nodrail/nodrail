@@ -10,10 +10,12 @@ import { focusRing } from "./styles";
 export function SecretReveal({
   label,
   secret,
+  instructions,
   children,
 }: {
   label: string;
   secret: string;
+  instructions?: ReactNode;
   children?: ReactNode;
 }) {
   const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
@@ -44,6 +46,7 @@ export function SecretReveal({
       >
         {secret}
       </code>
+      {instructions}
       <div className="flex flex-wrap items-start gap-2">
         <Button type="button" onClick={() => void copySecret()}>
           Copy

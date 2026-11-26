@@ -19,7 +19,11 @@ describe("the Claude Code plugin", () => {
   });
 
   test("defaults to the hosted service", () => {
-    expect(plugin.userConfig.url.default).toBe("https://app.nodrail.com");
+    expect(plugin.userConfig.url).toMatchObject({
+      required: true,
+      description: expect.stringContaining("https://app.nodrail.com"),
+    });
+    expect(plugin.userConfig.url).not.toHaveProperty("default");
   });
 
   test("declares the hooks the manual setup uses", () => {

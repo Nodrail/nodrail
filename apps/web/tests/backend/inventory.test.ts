@@ -112,6 +112,7 @@ describe("OTLP ingestion", () => {
       reports: 1,
       verified: 0,
       configured: 1,
+      disconnected: 0,
       inactive: 0,
       unknown: 0,
       stale: 0,

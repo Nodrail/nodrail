@@ -2,16 +2,12 @@ import type { ReactNode } from "react";
 import { Disclosure } from "@/components/app/card";
 import type { AdapterKey } from "@/contracts/v1/agents";
 import {
-  applySnippet,
   claudeCodePluginSnippet,
   claudeCodeSettings,
-  codexPluginSnippet,
-  connectSnippet,
   customClientSnippet,
   environmentSnippet,
   frameworkSnippet,
   sdkEnvironmentSnippet,
-  type ConnectPlace,
 } from "../setup-snippets";
 import { FormHint } from "@/components/app/note";
 import { CodeBlock } from "@/components/app/inert-json";
@@ -33,7 +29,7 @@ function Snippet({ label, text }: { label: string; text: string }) {
   );
 }
 
-const hookPath = "node /path/to/nodrail-hook.mjs";
+const hookPath = "nodrail-claude-hook";
 
 const privacyNote = `File contents are sent only as fingerprints. Shell commands, URLs and
   tool inputs are sent with anything that looks like a secret
@@ -42,17 +38,15 @@ const privacyNote = `File contents are sent only as fingerprints. Shell commands
 export function SetupInstructions({
   adapterKey,
   serverUrl,
-  place,
 }: {
   adapterKey: AdapterKey;
   serverUrl: string;
-  /** This workspace and environment, for the project's `connect:` block. */
-  place: ConnectPlace;
 }) {
   if (adapterKey === "custom-sdk")
     return (
       <Instructions>
-        <h3>1. Give your app the credential</h3>
+        <h3>1. Install the SDK and set its environment</h3>
+        <Snippet label="Install the SDK" text="npm install @nodrail/client" />
         <Snippet
           label="SDK environment"
           text={sdkEnvironmentSnippet(serverUrl)}
@@ -70,53 +64,38 @@ export function SetupInstructions({
     );
   if (adapterKey === "codex-hook")
     return (
-      <Instructions>
-        <h3>Install the Codex plugin</h3>
-        <Snippet label="Codex setup" text={codexPluginSnippet(serverUrl)} />
-        <FormHint>
-          <code>nodrail apply</code> connects Claude Code to this control plane
-          today. For Codex, install the plugin. Codex asks you to trust new
-          hooks once, and they do nothing until you do.
-        </FormHint>
-        <Disclosure summary="What this does and does not cover">
-          Shell commands, file patches and MCP tools are checked before they
-          run. Web search runs on OpenAI&apos;s side, so Codex can&apos;t check
-          it. Codex runs a tool anyway if the hook can&apos;t start at all, for
-          example without Node.js. {privacyNote}
-        </Disclosure>
-      </Instructions>
+      <FormHint>
+        Choose Codex in the project setup and run <code>nodrail apply</code> to
+        enroll this machine at <code>{serverUrl}</code>.
+      </FormHint>
     );
-  return <ClaudeCodeInstructions serverUrl={serverUrl} place={place} />;
+  return <ClaudeCodeInstructions serverUrl={serverUrl} />;
 }
 
-/** Claude Code: nodrail.yaml and `nodrail apply` first, the plugin second. */
-function ClaudeCodeInstructions({
-  serverUrl,
-  place,
-}: {
-  serverUrl: string;
-  place: ConnectPlace;
-}) {
+function ClaudeCodeInstructions({ serverUrl }: { serverUrl: string }) {
   return (
     <Instructions>
-      <h3>1. Declare the connection in nodrail.yaml</h3>
-      <Snippet label="nodrail.yaml" text={connectSnippet(serverUrl, place)} />
-      <h3>2. Plan and apply</h3>
-      <Snippet label="Plan and apply" text={applySnippet(serverUrl)} />
-      <FormHint>
-        <code>nodrail plan</code> shows what would change and starts nothing.{" "}
-        <code>nodrail apply</code> publishes the locked policy here and installs
-        the hook in Claude Code. Set the credential wherever Claude Code runs.
-      </FormHint>
-      <Disclosure summary="No nodrail.yaml yet? Install the plugin">
+      <Disclosure summary="Install the Claude Code plugin">
         <Snippet label="Claude Code setup" text={claudeCodePluginSnippet} />
         <FormHint>
-          Claude Code asks for the credential when you install, and keeps it in
-          your system&apos;s secure store. The plugin follows the rules
-          published in this environment.
+          Use Claude Code 2.1.295 or later and put Node.js 22 or later on your
+          PATH. In the plugin prompt, enter the credential and set the server
+          address to <code>{serverUrl}</code>. Claude Code stores the credential
+          in your system&apos;s secure store.
         </FormHint>
       </Disclosure>
       <Disclosure summary="Set the hook up by hand">
+        <Snippet
+          label="Install the Claude Code hook"
+          text="npm install -g @nodrail/client"
+        />
+        <FormHint>
+          Use Node.js 22 or later. Put <code>nodrail-claude-hook</code> on your
+          PATH, set these variables in the shell where you launch Claude Code,
+          and merge the hook into your project&apos;s{" "}
+          <code>.claude/settings.local.json</code>. Use either the plugin or
+          this hook entry to avoid checking each call twice.
+        </FormHint>
         <Snippet label="Environment" text={environmentSnippet(serverUrl)} />
         <Snippet
           label="Claude Code settings"

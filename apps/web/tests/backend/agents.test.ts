@@ -243,7 +243,7 @@ describe("the agent list", () => {
     await connect(w, agentKey);
     const dev = await developmentList(w);
     expect(dev.items.map((item) => item.key)).toEqual([agentKey]);
-    expect(dev.items[0]?.installation.reporting).toBe("never_reported");
+    expect(dev.items[0]?.installation?.reporting).toBe("never_reported");
     const prod = await read(w.owner, w, (context) =>
       listAgents(context, "production"),
     );
@@ -268,7 +268,7 @@ describe("the agent list", () => {
 
     const list = await developmentList(w);
     const reporting = Object.fromEntries(
-      list.items.map((item) => [item.key, item.installation.reporting]),
+      list.items.map((item) => [item.key, item.installation?.reporting]),
     );
     expect(reporting).toEqual({
       recent: "reporting",

@@ -102,13 +102,13 @@ export const setupTours = {
       },
       {
         anchor: "agents-status",
-        title: "Connected and reporting.",
-        body: "Connected agents have a credential for this control plane. Reporting ones checked in recently from their host.",
+        title: "Registration and reporting.",
+        body: "Reporting installations checked in recently from their host. An installation can be registered before its first check-in.",
       },
       {
         anchor: "agents-connect",
-        title: "Connect another agent.",
-        body: "Give it an ID and a credential, then run nodrail apply with a connect: block that points here.",
+        title: "Connect a project.",
+        body: "Sign in with the CLI, add the connection to nodrail.yaml, then apply. Agents declared there appear here automatically.",
       },
     ],
   },
@@ -138,22 +138,22 @@ export const setupTours = {
     ],
   },
   connect: {
-    label: "Connect an agent",
+    label: "Connect a project",
     steps: [
       {
         anchor: "connect-runtime",
         title: "Pick its host.",
-        body: "Choose Claude Code, Codex, Copilot or your own code. The setup steps that follow are written for it.",
+        body: "Choose Claude Code, Codex or Copilot. The commands that follow use that runtime.",
       },
       {
         anchor: "connect-identity",
-        title: "Give it a stable ID.",
-        body: "Use the same ID in the agent's configuration. Its rules and activity are listed under it.",
+        title: "Connect your project.",
+        body: "Run the connect command to set the destination, sign in if needed and see the plan.",
       },
       {
         anchor: "connect-submit",
-        title: "Connect, then install.",
-        body: "The credential is shown once, with the nodrail.yaml block and the nodrail apply to run. This page shows the agent's first check-in as it happens, and the checks to run tick themselves as its decisions show them.",
+        title: "Review and apply.",
+        body: "Review the plan, then apply to publish it and enroll your machine. Open Activity after running a covered tool to verify the first check-in.",
       },
     ],
   },

@@ -7,7 +7,7 @@ import {
   type SimulationInput,
   type SimulationResult,
 } from "@nodrail/policy-engine";
-import { HANDBACK_ACTION } from "@nodrail/policy-engine/hook-runs";
+import { HANDBACK_ACTION } from "@nodrail/policy-engine/protocol";
 import {
   PAYLOAD_BYTES,
   checkValue,

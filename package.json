@@ -1,5 +1,5 @@
 {
-  "name": "nodrail-server",
+  "name": "nodrail",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -15,9 +15,14 @@
     "lint": "pnpm --filter @nodrail/web lint",
     "test": "pnpm --filter @nodrail/web test",
     "test:backend": "pnpm --filter @nodrail/web test:backend",
-    "lint:tools": "oxlint -c .oxlintrc.json packages/agent-plugins/scripts packages/cli/scripts packages/mcp/scripts"
+    "verify:packages": "pnpm -r --workspace-concurrency=1 verify",
+    "changeset": "changeset",
+    "version-packages": "changeset version && pnpm install --lockfile-only",
+    "release": "pnpm --filter @nodrail/mcp... --filter @nodrail/client... -r build && node scripts/stage-release.mjs",
+    "lint:tools": "oxlint -c .oxlintrc.json scripts packages/agent-plugins/scripts packages/agent-plugins/tools/fuzz-hook.js packages/cli/scripts packages/mcp/scripts"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "oxlint": "^1.93.0"
   }
 }

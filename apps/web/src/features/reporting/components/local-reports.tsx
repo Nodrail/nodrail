@@ -1,3 +1,4 @@
+import { reportingEndpoint } from "../endpoint";
 import { EmptyState } from "@/components/app/card";
 import { ExchangeList } from "@/features/contracts/components/exchange-list";
 import {
@@ -32,6 +33,7 @@ const decisions: Record<
 > = {
   allow: { tone: "success", label: "Allowed locally" },
   deny: { tone: "danger", label: "Denied locally" },
+  would_deny: { tone: "warning", label: "Would deny" },
 };
 
 const short = (value: string | null) =>
@@ -153,8 +155,8 @@ export async function LocalReports({
     return (
       <EmptyState title="Nothing reported yet">
         Send traces from a project&apos;s <code>telemetry:</code> settings or an
-        OpenTelemetry collector to <code>/api/v1/otlp/v1/traces</code> with a
-        reporting token. Admins and policy managers can see reports from
+        OpenTelemetry collector to <code>{reportingEndpoint(environment)}</code>{" "}
+        with a reporting token. Admins and policy managers can see reports from
         everyone.
       </EmptyState>
     );

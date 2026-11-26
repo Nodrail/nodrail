@@ -1,28 +1,46 @@
 name: Server release
 
 on:
-  push:
-    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Immutable server version tag (for example v0.8.1)
+        type: string
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: server-release-${{ github.ref }}
+  group: server-release
   cancel-in-progress: false
 
 env:
   NODRAIL_REGISTRY: ghcr.io/nodrail
-  NODRAIL_VERSION: ${{ github.ref_name }}
+  NODRAIL_VERSION: ${{ inputs.tag }}
 
 defaults:
   run:
     shell: bash
 
 jobs:
+  verify:
+    if: github.repository == 'Nodrail/nodrail' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      commit: ${{ steps.pin.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: pin
+        run: node scripts/verify-release.mjs image "$NODRAIL_VERSION"
+
   candidates:
     name: Build release candidates
-    if: github.repository == 'Nodrail/nodrail-server'
+    needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -34,10 +52,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.verify.outputs.commit }}
           persist-credentials: false
-      - name: Validate release tag
-        run: |
-          [[ "$NODRAIL_VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
         with:
           platforms: arm64
@@ -58,7 +74,7 @@ jobs:
           outputs: type=image,name=ghcr.io/nodrail/server,push-by-digest=true,name-canonical=true,push=true
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.version=${{ inputs.tag }}
             org.opencontainers.image.licenses=Apache-2.0
           provenance: mode=max
           sbom: true
@@ -73,14 +89,14 @@ jobs:
           outputs: type=image,name=ghcr.io/nodrail/server-migrate,push-by-digest=true,name-canonical=true,push=true
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.version=${{ inputs.tag }}
             org.opencontainers.image.licenses=Apache-2.0
           provenance: mode=max
           sbom: true
 
   self-hosted:
     name: Compose smoke (${{ matrix.platform }})
-    needs: candidates
+    needs: [verify, candidates]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     permissions:
@@ -105,6 +121,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.verify.outputs.commit }}
           persist-credentials: false
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
@@ -142,7 +159,7 @@ jobs:
 
   publish:
     name: Sign and tag the smoke-tested indexes
-    needs: [candidates, self-hosted]
+    needs: [verify, candidates, self-hosted]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -163,8 +180,8 @@ jobs:
         run: |
           server="$NODRAIL_REGISTRY/server"
           migrate="$NODRAIL_REGISTRY/server-migrate"
-          cosign sign --yes "$server@$SERVER_DIGEST"
-          cosign sign --yes "$migrate@$MIGRATE_DIGEST"
+          cosign sign --yes -a "release=$NODRAIL_VERSION" "$server@$SERVER_DIGEST"
+          cosign sign --yes -a "release=$NODRAIL_VERSION" "$migrate@$MIGRATE_DIGEST"
 
           promote() {
             local image="$1" digest="$2"

@@ -5,7 +5,7 @@ import {
   observationAttributes,
   unmanagedKind,
 } from "@/contracts/v1/inventory";
-import type { WorkspaceContext } from "@/server/db/context";
+import type { RuntimeContext } from "@/server/db/context";
 
 /**
  * The team's inventory (W4): what each person's machines report about each
@@ -20,7 +20,7 @@ const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 export type ReportedProject = { name: string; id: string | null };
 
-type Report = {
+export type Report = {
   machine: string;
   project: ReportedProject;
   host: string;
@@ -96,18 +96,12 @@ export function toReport(
 
 /** Keeps the report unless the one already kept is newer. */
 export async function keepObservation(
-  context: WorkspaceContext,
-  environmentId: string,
+  context: Pick<RuntimeContext, "workspaceId" | "manager">,
+  owner: { environmentId: string; userId: string },
   report: Report,
 ) {
-  await context.manager.query(
-    `INSERT INTO nodrail.inventory_reports AS r
-       (workspace_id, environment_id, user_id, machine, project, host, agent,
-        activation, in_step, drift, applied_revision, locked_revision,
-        unmanaged, names, observed_at, project_id, project_key)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-             $16, $17)
-     ON CONFLICT ON CONSTRAINT inventory_reports_latest DO UPDATE SET
+  const { environmentId, userId } = owner;
+  const update = `DO UPDATE SET
        agent = excluded.agent, activation = excluded.activation,
        in_step = excluded.in_step, drift = excluded.drift,
        applied_revision = excluded.applied_revision,
@@ -115,11 +109,19 @@ export async function keepObservation(
        unmanaged = excluded.unmanaged, names = excluded.names,
        observed_at = excluded.observed_at, received_at = clock_timestamp(),
        project = excluded.project
-     WHERE r.observed_at < excluded.observed_at`,
+     WHERE r.observed_at < excluded.observed_at`;
+  await context.manager.query(
+    `INSERT INTO nodrail.inventory_reports AS r
+       (workspace_id, environment_id, user_id, machine, project, host, agent,
+        activation, in_step, drift, applied_revision, locked_revision,
+        unmanaged, names, observed_at, project_id, project_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+             $16, $17)
+     ON CONFLICT ON CONSTRAINT inventory_reports_latest ${update}`,
     [
       context.workspaceId,
       environmentId,
-      context.principal.userId,
+      userId,
       report.machine,
       report.project.name,
       report.host,

@@ -1,3 +1,7 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { appPath } from "@/lib/product-path";
+import { reportingEndpoint } from "@/features/reporting/endpoint";
 import { EmptyState } from "@/components/app/card";
 import { DataTable, DataTitle, ListSummary } from "@/components/app/data-table";
 import { StatusBadge } from "@/components/app/status-badge";
@@ -61,7 +65,7 @@ function Row({ row }: { row: InventoryRowDto }) {
 
 function summaryText({ summary, seesEveryone }: InventoryDto) {
   const whose = seesEveryone ? "on your team's machines" : "on your machines";
-  return `${summary.reports} setups ${whose}. Reported, not attested: ${summary.verified} with activation verified by local check, ${summary.configured} with the hook configured (coverage unknown), ${summary.inactive} with the hook not running, ${summary.unknown} unknown, ${summary.stale} stale; ${summary.drifted} drifted, ${summary.behind} behind the intended revision.`;
+  return `${summary.reports} setups ${whose}. Reported, not attested: ${summary.verified} with activation verified by local check, ${summary.configured} with the hook configured (coverage unknown), ${summary.inactive} with the hook not running, ${summary.unknown} unknown, ${summary.disconnected} disconnected, ${summary.stale} stale; ${summary.drifted} drifted, ${summary.behind} behind the intended revision.`;
 }
 
 /** What each machine last reported, project by project. */
@@ -77,12 +81,21 @@ export async function InventoryTable({
   );
   if (inventory.rows.length === 0)
     return (
-      <EmptyState title="No machine has reported yet">
-        Machines report when a project&apos;s <code>telemetry:</code> points at{" "}
-        <code>/api/v1/otlp/v1/traces</code> with a reporting token (
-        <code>inventory:write</code>, from API tokens). Each session start then
-        sends what <code>nodrail status</code> sees: counts, revisions and
-        whether the policy runs, never files or paths.
+      <EmptyState
+        title="No machine has reported yet"
+        action={
+          <Button asChild variant="outline">
+            <Link href={`${appPath(workspace, environment)}/agents/connect`}>
+              Open project setup
+            </Link>
+          </Button>
+        }
+      >
+        Run <code>nodrail apply</code> in a connected project to send this
+        machine’s first setup report. Session starts refresh the report. To send
+        reports from an external OpenTelemetry collector, use{" "}
+        <code>{reportingEndpoint(environment)}</code> with an Inventory
+        reporting token.
       </EmptyState>
     );
   return (

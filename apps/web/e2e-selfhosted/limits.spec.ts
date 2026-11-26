@@ -1,35 +1,10 @@
-import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { connect } from "../e2e-app/helpers";
+import { acceptanceSql as sql, workspaceSlug } from "./database";
 import { readState, storagePath } from "./state";
 
 test.use({ storageState: storagePath() });
-
-/** psql in the acceptance stack's Postgres, as its superuser. */
-const sql = (query: string) =>
-  execFileSync(
-    "docker",
-    [
-      "compose",
-      "-p",
-      process.env.ACCEPTANCE_PROJECT ?? "nodrail-accept",
-      "exec",
-      "-T",
-      "postgres",
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "nodrail",
-      "-tAc",
-      query,
-    ],
-    { cwd: process.env.ACCEPTANCE_DEPLOY, encoding: "utf8" },
-  ).trim();
-
-/** The slug of this run's workspace, from its base path `/app/<slug>/<env>`. */
-const workspaceSlug = (base: string) => base.split("/")[2];
 
 test("self-hosted: past Cloud's 1,000 free actions, calls go on", async ({
   page,

@@ -131,6 +131,7 @@ export function filterCount(query: ActivityQuery, view: ActivityView) {
     query.range !== "all",
     view === "events" && query.kind !== "all",
     view === "events" && query.run !== "",
+    view === "events" && !!query.check_token,
   ].filter(Boolean).length;
 }
 

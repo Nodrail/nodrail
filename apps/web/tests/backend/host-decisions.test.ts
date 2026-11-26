@@ -4,10 +4,13 @@
 // allows or denies.
 import { randomBytes, randomUUID } from "node:crypto";
 import { Client } from "pg";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+import { lateHostReport } from "@/contracts/v1/activity";
 import { POST as decisionsRoute } from "@/app/api/v1/runtime/decisions/route";
 import { readWorkspace, withRuntime } from "@/server/db/context";
 import { listActivity } from "@/server/modules/activity";
+import { admissionId } from "@/server/modules/runtime/admission";
+import { runtimeCaller } from "@/server/modules/runtime/caller";
 import { recordHostDecisions } from "@/server/modules/runtime/host-decisions";
 import {
   getActionStatus,
@@ -15,6 +18,7 @@ import {
   requestPermit,
   submitAction,
 } from "@/server/modules/runtime";
+import { getReport } from "@/server/modules/reports";
 import { getRun, listRuns } from "@/server/modules/runs";
 import { runEvents } from "@/server/modules/runs/history";
 import { runMigrations } from "../../scripts/local-stack.mjs";
@@ -52,10 +56,23 @@ const decision = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const record = (token: string, decisions: unknown[]) =>
-  withRuntime(token, "decisions:write", (context) =>
-    recordHostDecisions(context, { decisions }),
-  );
+function evidence(
+  caller: Awaited<ReturnType<typeof runtimeCaller>>,
+  item: ReturnType<typeof decision>,
+) {
+  return {
+    ...item,
+    admission_id: admissionId(caller, item.idempotency_key, item.policy_digest),
+  };
+}
+
+const record = (token: string, decisions: ReturnType<typeof decision>[]) =>
+  withRuntime(token, "decisions:write", async (context) => {
+    const caller = await runtimeCaller(context);
+    return recordHostDecisions(context, {
+      decisions: decisions.map((item) => evidence(caller, item)),
+    });
+  });
 
 const idOf = (result: unknown) => {
   const found = result as { action_id?: string };
@@ -78,7 +95,125 @@ async function runOf(w: TestWorkspace, key: string) {
   return run;
 }
 
+const issue = (token: string, item: ReturnType<typeof decision>) =>
+  withRuntime(token, "decisions:write", async (context) =>
+    evidence(await runtimeCaller(context), item),
+  );
+
+test("proofs expire at the server-issued deadline and remain in history", async () => {
+  const { token } = await rig();
+  const now = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+  try {
+    const standard = await issue(token, decision());
+    expect(standard.admission_id?.split(".")[1]).toBe(
+      String(Math.floor(now / 1000) + 7 * 86400),
+    );
+    vi.stubEnv("NODRAIL_ADMISSION_TTL_SECONDS", "30");
+    const expired = await issue(token, decision({ run: { key: "expired" } }));
+    clock.mockReturnValue(now + 30_000);
+    const fresh = await issue(token, decision());
+    const { results } = await withRuntime(token, "decisions:write", (context) =>
+      recordHostDecisions(context, { decisions: [expired, fresh] }),
+    );
+    expect(results).toEqual([
+      {
+        key: expired.idempotency_key,
+        action_id: expect.any(String),
+        status: lateHostReport,
+      },
+      { key: fresh.idempotency_key, action_id: expect.any(String) },
+    ]);
+    const [row] = await admin.query(
+      "SELECT run_id, access_epoch FROM nodrail.action_requests WHERE id = $1",
+      [idOf(results[0])],
+    );
+    expect(row).toEqual({ run_id: null, access_epoch: 0 });
+  } finally {
+    clock.mockRestore();
+    vi.unstubAllEnvs();
+  }
+});
+
+test("rotation signs with the current key and verifies the retired key only during grace", async () => {
+  const { token } = await rig();
+  const now = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+  const one = { secret: randomBytes(32).toString("hex") };
+  const two = { secret: randomBytes(32).toString("hex") };
+  try {
+    vi.stubEnv(
+      "NODRAIL_ADMISSION_KEYS",
+      JSON.stringify({ current: "one", keys: { one } }),
+    );
+    const withinGrace = await issue(token, decision());
+    const outsideGrace = await issue(token, decision());
+    expect(withinGrace.admission_id).toMatch(/^one\./);
+    vi.stubEnv(
+      "NODRAIL_ADMISSION_KEYS",
+      JSON.stringify({
+        current: "two",
+        keys: {
+          two,
+          one: { ...one, verifyUntil: new Date(now + 60_000).toISOString() },
+        },
+      }),
+    );
+    const current = await issue(token, decision());
+    expect(current.admission_id).toMatch(/^two\./);
+
+    const report = (item: Awaited<ReturnType<typeof issue>>) =>
+      withRuntime(token, "decisions:write", (context) =>
+        recordHostDecisions(context, { decisions: [item] }),
+      );
+    expect((await report(withinGrace)).results).toEqual([
+      { key: withinGrace.idempotency_key, action_id: expect.any(String) },
+    ]);
+    clock.mockReturnValue(now + 61_000);
+    expect((await report(outsideGrace)).results).toEqual([
+      {
+        key: outsideGrace.idempotency_key,
+        action_id: expect.any(String),
+        status: lateHostReport,
+      },
+    ]);
+    expect((await report(current)).results).toEqual([
+      { key: current.idempotency_key, action_id: expect.any(String) },
+    ]);
+  } finally {
+    clock.mockRestore();
+    vi.unstubAllEnvs();
+  }
+});
+
 describe("host decisions", () => {
+  test("a host denial without a gate outcome never counts as a gate pass", async () => {
+    const { w, token } = await rig();
+    const reply = await record(token, [
+      decision({
+        tool: "claude-code",
+        operation: "agent",
+        resource: { kind: "agent", id: "deploy" },
+        params: { subagent_type: "deploy" },
+        verdict: "deny",
+        run: { key: "host-gated-run" },
+      }),
+    ]);
+    expect(reply).toMatchObject({
+      results: [expect.objectContaining({ action_id: expect.any(String) })],
+    });
+    const report = await readWorkspace(w.owner, w.id, (context) =>
+      getReport(context, ENV, 30),
+    );
+    expect(report.runs).toMatchObject({
+      count: 1,
+      withoutHold: { count: 0, of: 0 },
+    });
+    expect(
+      report.gates.find(({ name }) => name === "QA before a deploy"),
+    ).toMatchObject({ checked: 0, held: 0, firstPass: { count: 0, of: 0 } });
+  });
+
   test("a batch lands in its run, in order with Cloud's own decisions", async () => {
     const { w, token } = await rig();
     const key = "feat/host";
@@ -216,11 +351,15 @@ describe("host decisions", () => {
 
   test("a retry is the same row; another payload under the key is refused", async () => {
     const { token } = await rig();
-    const item = decision();
-    const first = await record(token, [item]);
-    const again = await record(token, [item, item]);
+    const item = await issue(token, decision());
+    const replay = (decisions: (typeof item)[]) =>
+      withRuntime(token, "decisions:write", (context) =>
+        recordHostDecisions(context, { decisions }),
+      );
+    const first = await replay([item]);
+    const again = await replay([item, item]);
     expect(again.results).toEqual([first.results[0], first.results[0]]);
-    const changed = await record(token, [{ ...item, verdict: "deny" }]);
+    const changed = await replay([{ ...item, verdict: "deny" }]);
     expect(changed.results).toEqual([
       { key: item.idempotency_key, error: { code: "IDEMPOTENCY_CONFLICT" } },
     ]);
@@ -251,7 +390,9 @@ describe("host decisions", () => {
 
   test("over HTTP: 409 per item, a bad item alone, and the scope", async () => {
     const { token } = await rig();
-    const item = decision();
+    const item = await withRuntime(token, "decisions:write", async (context) =>
+      evidence(await runtimeCaller(context), decision()),
+    );
     const sent = await postJson(decisionsRoute, "runtime/decisions", token, {
       decisions: [item, { idempotency_key: "bad", verdict: "maybe" }],
     });

@@ -6,12 +6,13 @@ import {
   expectAccessible,
   expectFitsPhone,
   newEmail,
+  openStandaloneSetup,
   seedClientReport,
   seedDecision,
   setLastSeen,
+  setAuthSource,
   signIn,
   signInLink,
-  requestLink,
   startWorkspace,
   viewerOn,
   workspaceOnPhone,
@@ -35,27 +36,30 @@ test.describe("the first run", () => {
     const base = new URL(page.url()).pathname.replace("/overview", "");
     const slug = base.split("/")[2] ?? "";
 
-    await expect(page.getByText("0 of 4 done")).toBeVisible();
+    await expect(page.getByText("0 of 3 done")).toBeVisible();
     await expect(step(page, "agent")).toHaveAttribute("aria-current", "step");
     await expectAccessible(page);
 
-    await page.getByRole("link", { name: "Connect an agent" }).click();
+    await page.getByRole("link", { name: "Connect a project" }).click();
     await page.waitForURL(/agents\/connect$/);
+    await openStandaloneSetup(page);
     await page.getByLabel("Agent ID").fill("support");
-    await page.getByRole("button", { name: "Connect agent" }).click();
+    await page.getByRole("button", { name: "Create credential" }).click();
     await expect(page.getByLabel("Agent credential")).toBeVisible();
 
     await page.goto(`${base}/overview`);
     await expect(step(page, "agent")).toContainText("first check-in");
-    await expect(step(page, "rule")).toHaveAttribute("aria-current", "step");
+    await expect(step(page, "agent")).not.toHaveAttribute("data-done");
 
     await setLastSeen(slug, "support", 1);
     await seedDecision(slug, "support");
     await page.goto(`${base}/overview`);
     // An agent connected and a first decision recorded: nothing waits for a person.
-    await expect(page.getByText("2 of 4 done")).toBeVisible();
+    await expect(firstSteps(page)).toHaveCount(0);
     await expect(
-      page.locator("[data-slot=health-tile][data-tile=agents]"),
+      page
+        .locator("[data-slot=health-tile][data-tile=agents]")
+        .filter({ visible: true }),
     ).toContainText("1 of 1");
 
     await createRule(page, base, {
@@ -82,13 +86,16 @@ test.describe("the first run", () => {
     const inviteUrl = (await link.textContent()) ?? "";
 
     const guest = await (await browser.newContext()).newPage();
+    await setAuthSource(guest);
     await guest.goto(inviteUrl);
     await guest.waitForURL(/\/login/);
-    await requestLink(
-      guest,
-      email,
-      new URL(guest.url()).pathname + new URL(guest.url()).search,
-    );
+    await guest.getByRole("link", { name: "Create an account" }).click();
+    await expect(
+      guest.getByRole("heading", { name: "Create an account to join" }),
+    ).toBeVisible();
+    await guest.getByLabel("Email").fill(email);
+    await guest.getByRole("button", { name: "Continue with email" }).click();
+    await expect(guest.getByRole("status")).toContainText("Check your email");
     const { url } = await signInLink(email);
     await guest.goto(url);
     await guest.getByRole("button", { name: "Continue to Nodrail" }).click();
@@ -117,7 +124,7 @@ test.describe("the first run", () => {
     const { base, slug } = await workspaceWithDecision(page, "Second env");
     await setLastSeen(slug, "support", 1);
     await page.goto(`${base}/overview`);
-    await expect(step(page, "agent")).toHaveAttribute("data-done");
+    await expect(firstSteps(page)).toHaveCount(0);
     await page.goto(`${base.replace("development", "production")}/overview`);
     await expect(step(page, "agent")).toHaveAttribute("aria-current", "step");
   });

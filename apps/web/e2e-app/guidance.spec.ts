@@ -130,7 +130,9 @@ test.describe("guided tours", () => {
     await expect(card).toHaveCount(0);
 
     await page.goto(`${base}/agents/connect`);
-    await expect(page.getByLabel("Agent ID")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Choose your host" }),
+    ).toBeVisible();
     await page.waitForTimeout(1_000);
     await expect(card).toHaveCount(0);
     await replayTour(page);
@@ -176,20 +178,20 @@ test.describe("guided tours", () => {
 });
 
 test.describe("first steps", () => {
-  test("tick off as a new workspace connects an agent and adds a rule", async ({
+  test("track live policy and keep dismissal in its environment", async ({
     page,
   }) => {
     const { base } = await startWorkspace(page, `Steps ${Date.now()}`);
     const steps = page.locator("[data-slot=first-steps]");
     const progress = page.locator("[data-slot=first-steps-progress]");
-    await expect(progress).toHaveText("0 of 4 done");
+    await expect(progress).toHaveText("0 of 3 done");
     await expect(
       steps.getByRole("button", { name: "Hide these steps" }),
     ).toBeVisible();
 
     await connect(page, base, "support");
     await page.goto(`${base}/overview`);
-    await expect(progress).toHaveText("1 of 4 done");
+    await expect(progress).toHaveText("0 of 3 done");
 
     await createRule(page, base, {
       name: "Read issues",
@@ -197,7 +199,7 @@ test.describe("first steps", () => {
       resourceKind: "repository",
     });
     await page.goto(`${base}/overview`);
-    await expect(progress).toHaveText("2 of 4 done");
+    await expect(progress).toHaveText("1 of 3 done");
     await expect(
       page.locator("[data-slot=first-step][data-step=rule]"),
     ).toHaveAttribute("data-done");
@@ -210,6 +212,8 @@ test.describe("first steps", () => {
       page.getByRole("heading", { level: 1, name: "Overview" }),
     ).toBeVisible();
     await expect(steps).toHaveCount(0);
+    await page.goto(`${base.replace(/development$/, "production")}/overview`);
+    await expect(steps).toBeVisible();
   });
 });
 

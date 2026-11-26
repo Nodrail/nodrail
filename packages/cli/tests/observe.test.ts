@@ -210,9 +210,12 @@ describe("nodrail observe", () => {
   test("--detach starts it apart and returns at once", async () => {
     const marker = join(mkdtempSync(join(tmpdir(), "nodrail-detach-")), "ran");
     const script = join(marker, "..", "child.cjs");
+    const pending = JSON.stringify(`${marker}.tmp`);
     writeFileSync(
       script,
-      `require("node:fs").writeFileSync(${JSON.stringify(marker)}, process.argv.slice(2).join(" "));`,
+      `const fs = require("node:fs");
+fs.writeFileSync(${pending}, process.argv.slice(2).join(" "));
+fs.renameSync(${pending}, ${JSON.stringify(marker)});`,
     );
     const io = fakeIo({ self: [script] });
     const project = join(tmpdir(), "some project");
@@ -290,8 +293,10 @@ describe("sending the observation (W3.3)", () => {
       join(p.home, ".nodrail/machine-id"),
       "utf8",
     ).trim();
-    expect(span!.attributes["nodrail.machine"]).toBe(machine);
-    expect(machine).toMatch(/^[0-9a-f]{32}$/);
+    expect(span!.attributes["nodrail.machine"]).toBe(
+      machine.replaceAll("-", ""),
+    );
+    expect(span!.attributes["nodrail.machine"]).toMatch(/^[0-9a-f]{32}$/);
     expect(span!.attributes["nodrail.unmanaged.names"]).toBeUndefined();
     const text = JSON.stringify(queued(p));
     for (const hidden of [p.cwd, p.home, "github", SECRET])

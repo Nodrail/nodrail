@@ -525,6 +525,37 @@ inEachMode(() => {
       ).rejects.toMatchObject({ code: "INVALID_INPUT" });
     });
 
+    test("an enrollment cannot look up another project's pinned evidence", async () => {
+      const { w: isolated } = await trusted();
+      const run = newRun(isolated);
+      const stored = await submit(run);
+      const project = randomUUID();
+      const host = await createAgent(isolated, "enrolled-host");
+      const token = await issueToken(isolated, host);
+      await admin.query(
+        "UPDATE nodrail.installations SET enrollment_project_id = $1 WHERE id = $2",
+        [project, host.installationId],
+      );
+      await admin.query(
+        "UPDATE nodrail.policy_versions SET managed_project_id = $1, managed_revision = $2 WHERE id = $3",
+        [project, REVISION, isolated.versionId],
+      );
+      const subject = cleanRevision(run.sha);
+      expect(await status(isolated, { subject })).toMatchObject({
+        event_id: stored.id,
+      });
+      await expect(
+        withRuntime(token, "evidence:read", (context) =>
+          runtimeEvidenceStatus(context, {
+            workspace_revision: REVISION,
+            gate: "merge",
+            requirement: "0",
+            subject,
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    });
+
     test("a credential without evidence:read is refused", async () => {
       const token = await issueToken(
         w,

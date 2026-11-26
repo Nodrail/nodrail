@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { connected, expectDenied, runHook, shell } from "./hook";
+import { connected, expectDenied, runHook, server, shell } from "./hook";
 import {
   addTeammate,
   confirmPublish,
@@ -36,6 +36,78 @@ test.describe("rules from YAML", () => {
     await expect(
       page.getByRole("link").filter({ hasText: "git status" }),
     ).toBeVisible();
+  });
+
+  test("console publication keeps warning about the repository after the live policy changes", async ({
+    page,
+  }) => {
+    const { base, slug } = await startWorkspace(page, `Pinned ${Date.now()}`);
+    await previewFile(
+      page,
+      base,
+      allowStatus.replace("Allow status", "Stale draft"),
+    );
+    const projectId = randomUUID();
+    const csrf = await page.request.get("/api/v1/session/csrf", {
+      headers: { "X-Nodrail-CSRF": "fetch" },
+    });
+    expect(csrf.ok()).toBe(true);
+    const { token } = (await csrf.json()) as { token: string };
+    const headers = { origin: server, "X-Nodrail-CSRF": token };
+    const query = new URLSearchParams({
+      workspace: slug,
+      environment: "development",
+    });
+    const review = await page.request.post(`/api/v1/rules/preview?${query}`, {
+      headers,
+      data: { yaml: allowStatus },
+    });
+    expect(review.ok()).toBe(true);
+    const { policy_revision, file_digest } = (await review.json()) as {
+      policy_revision: number;
+      file_digest: string;
+    };
+    const applied = await page.request.post(`/api/v1/rules/publish?${query}`, {
+      headers,
+      data: {
+        yaml: allowStatus,
+        policy_revision,
+        file_digest,
+        managed: {
+          project_id: projectId,
+          revision: "a".repeat(64),
+          policy_revision: null,
+        },
+      },
+    });
+    expect(applied.ok()).toBe(true);
+
+    await confirmPublish(page);
+    await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+      "Repository ownership changed",
+    );
+
+    await previewFile(page, base, "[]");
+    await expect(
+      page.getByText("Repository policy for " + projectId + "."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Publish rules" }).click();
+    await expect(page.getByRole("dialog")).toContainText("out of sync");
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Publish rules" })
+      .click();
+    await expect(page).toHaveURL(`${base}/policies`);
+    const live = await page.request.get(`/api/v1/rules/live?${query}`);
+    expect(live.ok()).toBe(true);
+    expect(await live.json()).toMatchObject({ managed: null });
+    await expect(
+      page.getByText("Repository policy for " + projectId + "."),
+    ).toBeVisible();
+
+    await previewFile(page, base, allowStatus);
+    await page.getByRole("button", { name: "Publish rules" }).click();
+    await expect(page.getByRole("dialog")).toContainText("out of sync");
   });
 
   test("problems are shown by line and block publishing", async ({ page }) => {
@@ -134,10 +206,13 @@ test.describe("rules from YAML", () => {
     await page
       .getByLabel("Or paste YAML")
       .fill(allowStatus.replace("Allow status", "Something else"));
-    await confirmPublish(page);
-    await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-      "changed since this preview",
-    );
+    const publish = page.getByRole("button", { name: "Publish rules" });
+    await expect(publish).toHaveCount(0);
+
+    await page.getByLabel("Or paste YAML").fill(allowStatus);
+    await expect(publish).toHaveCount(0);
+    await page.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(publish).toBeVisible();
   });
 
   test("a starter pack from an empty page governs reads and chains", async ({

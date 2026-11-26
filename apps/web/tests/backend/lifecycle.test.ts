@@ -153,8 +153,8 @@ describe("deleting an account", () => {
     );
     await admin.query(
       `INSERT INTO nodrail.notification_outbox
-         (workspace_id, kind, recipient_user_id, recipient_email, dedupe_key)
-       VALUES ($1, 'integration_stale', $2, $3, $4)`,
+         (workspace_id, kind, recipient_user_id, recipient_email, dedupe_key, available_at)
+       VALUES ($1, 'integration_stale', $2, $3, $4, now() + interval '1 day')`,
       [w.id, person.userId, person.email, randomUUID()],
     );
     await eraseAccount(person, person.email);
@@ -284,12 +284,12 @@ describe("exporting a workspace", () => {
   });
 });
 
-test("this release keeps the former waitlist tables for rolling upgrades", async () => {
+test("a freshly migrated database contains no waitlist tables", async () => {
   const [row] = await admin.query(
     `SELECT to_regclass('public.waitlist_subscribers') IS NOT NULL AS subscribers,
             to_regclass('public.waitlist_rate_limits') IS NOT NULL AS attempts`,
   );
-  expect(row).toEqual({ subscribers: true, attempts: true });
+  expect(row).toEqual({ subscribers: false, attempts: false });
 });
 
 describe("retention", () => {

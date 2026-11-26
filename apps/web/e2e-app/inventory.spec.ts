@@ -39,23 +39,47 @@ test.describe("Inventory", () => {
     const { base } = await startWorkspace(page, `Inventory ${Date.now()}`);
     await page.goto(`${base}/inventory`);
     await expect(page.getByText("No machine has reported yet")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Open project setup" }),
+    ).toHaveAttribute("href", `${base}/agents/connect`);
+    await expect(
+      page.getByText(/to send this machine’s first setup report/),
+    ).toContainText("nodrail apply");
+    await page.goto(`${base.replace(/development$/, "production")}/inventory`);
+    await expect(
+      page.getByText(`${server}/api/v1/otlp/v1/traces?environment=production`),
+    ).toBeVisible();
 
     await page.goto(workspacePage(base, "account/tokens"));
     await page.getByRole("button", { name: "Create token" }).click();
     const dialog = page.getByRole("dialog", { name: "Create an API token" });
     await dialog.getByLabel("Name").fill("observe");
-    await dialog.getByRole("checkbox", { name: /inventory:write/ }).check();
+    const publish = dialog.getByRole("checkbox", { name: /publish/i });
+    await publish.check();
+    await dialog.getByRole("radio", { name: /Inventory reporting/ }).check();
+    await expect(
+      dialog.locator('input[name="scopes"][value="rules:write"]'),
+    ).toBeDisabled();
+    await expect(publish).toBeHidden();
     await dialog.getByRole("button", { name: "Create token" }).click();
     const secret =
       (await page.getByLabel("API token", { exact: true }).textContent()) ?? "";
     expect(secret).toMatch(/^ndp_/);
+    const issued = page.getByRole("dialog", { name: "API token ready" });
+    await expect(issued).toContainText("Scope inventory:write");
+    const example = await issued
+      .getByText("Authorization: Bearer <token shown above>", { exact: true })
+      .textContent();
+    const authorization = example!
+      .replace("Authorization: ", "")
+      .replace("<token shown above>", secret);
 
     for (const drift of ["0", "3"]) {
       const { body, contentType } = observation(drift);
       const sent = await fetch(`${server}/api/v1/otlp/v1/traces`, {
         method: "POST",
         headers: {
-          authorization: `Bearer ${secret}`,
+          authorization,
           "content-type": contentType,
         },
         body,

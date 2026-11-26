@@ -39,6 +39,7 @@ async function recipients(
   { manager, workspaceId }: Scope,
   kind: NotificationKind,
   agentId: string | null,
+  userId: string | null = null,
 ) {
   const preference = preferenceFor[kind];
   const rows: { user_id: string; verified_email: string }[] =
@@ -48,15 +49,17 @@ async function recipients(
      JOIN nodrail.users u ON u.id = m.user_id
      LEFT JOIN nodrail.notification_preferences p
        ON p.workspace_id = m.workspace_id AND p.user_id = m.user_id
-     WHERE m.workspace_id = $1 AND m.status = 'active' AND u.status = 'active'
+     WHERE m.workspace_id = $1 AND ($4::uuid IS NULL OR m.user_id = $4)
+       AND m.status = 'active' AND u.status = 'active'
        AND u.verified_email IS NOT NULL
        AND m.role = ANY($2)
        AND COALESCE(p.${preferenceColumn[preference]}, true)
        AND ($3::uuid IS NULL OR m.role IN ('admin', 'policy_manager')
             OR EXISTS (SELECT 1 FROM nodrail.agent_members am
                        WHERE am.workspace_id = m.workspace_id
-                         AND am.user_id = m.user_id AND am.agent_id = $3))`,
-      [workspaceId, rolesFor(preference), agentId],
+                         AND am.user_id = m.user_id AND am.agent_id = $3))
+     ORDER BY m.user_id`,
+      [workspaceId, rolesFor(preference), agentId, userId],
     );
   return rows;
 }
@@ -79,7 +82,15 @@ export async function enqueueNotification<Kind extends NotificationKind>(
   const { kind, agentId, payload } = notice;
   const bucket =
     notice.dedupe ?? `${agentId}:${Math.floor(Date.now() / THROTTLE_MS)}`;
-  for (const person of await recipients(scope, kind, agentId))
+  for (const { user_id } of await recipients(scope, kind, agentId)) {
+    // Detaching a member updates this row before scrubbing the outbox.
+    await scope.manager.query(
+      `SELECT user_id FROM nodrail.workspace_memberships
+       WHERE workspace_id = $1 AND user_id = $2 FOR SHARE`,
+      [scope.workspaceId, user_id],
+    );
+    const [person] = await recipients(scope, kind, agentId, user_id);
+    if (!person) continue;
     await scope.manager.query(
       `INSERT INTO nodrail.notification_outbox
          (workspace_id, kind, recipient_user_id, recipient_email, payload_safe,
@@ -95,6 +106,7 @@ export async function enqueueNotification<Kind extends NotificationKind>(
         `${kind}:${bucket}:${person.user_id}`,
       ],
     );
+  }
 }
 
 /** The names a notification needs, read once for the place it concerns. */

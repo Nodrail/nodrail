@@ -5,8 +5,12 @@ import type { WorkspaceViewDto } from "@/contracts/v1/workspaces";
 import { AppFrame, initials } from "./app-frame";
 
 let pathname = "/app/acme/development/agents";
+let search = "";
 
-vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathname,
+  useSearchParams: () => new URLSearchParams(search),
+}));
 vi.mock("@/features/auth/actions", () => ({ signOut: vi.fn() }));
 
 const view: WorkspaceViewDto = {
@@ -68,6 +72,8 @@ describe("AppFrame", () => {
   beforeEach(() => {
     pathname = "/app/acme/development/agents";
     phone = false;
+    search = "";
+    document.cookie = "nodrail.environment.acme=; max-age=0; path=/";
     document.cookie = "nodrail.sidebar=; max-age=0; path=/";
     mockMedia();
     // The rail's labels are Radix tooltips, which measure themselves.
@@ -88,6 +94,28 @@ describe("AppFrame", () => {
       "/app/acme/development/policies",
     );
     expect(screen.queryByRole("link", { name: "Team" })).toBeNull();
+  });
+
+  test("preserves the Activity view and shared filters when switching environments", () => {
+    pathname = "/app/acme/development/activity";
+    search = "view=runs&range=7d&agent=support&event=123&cursor=abc";
+    renderFrame();
+    expect(
+      within(workspaceMenu()).getByRole("link", { name: "Production" }),
+    ).toHaveAttribute(
+      "href",
+      "/app/acme/production/activity?view=runs&range=7d",
+    );
+  });
+
+  test("uses the last environment for account navigation", () => {
+    pathname = "/app/acme/account/tokens";
+    document.cookie = "nodrail.environment.acme=production; path=/";
+    renderFrame();
+    expect(screen.getByRole("link", { name: "Policies" })).toHaveAttribute(
+      "href",
+      "/app/acme/production/policies",
+    );
   });
 
   test("puts the workspace's settings in its menu, billing only for who manages it", () => {

@@ -89,9 +89,9 @@ async function expectReport(page: Page) {
     page.getByRole("heading", { level: 1, name: "Insights" }),
   ).toBeVisible();
   const gates = section(page, "Where do gates and budgets stop work?");
-  await expect(gates).toContainText("explained against the gates");
+  await expect(gates).toContainText("compared with the gates");
   await expect(gates.locator("[data-slot=insight-figures]")).toContainText(
-    /Passed every gate without a hold\s*0 of 1 \(0%\)/,
+    /Runs with no recorded gate denial\s*0 of 1 \(0%\)/,
   );
   await expect(
     cells(page, "Gates", "Review before the pull request"),
@@ -268,7 +268,7 @@ test.describe("runs in Cloud", () => {
         .getByRole("heading", { name: "No runs in the last 30 days" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Import rules" }),
+      page.getByRole("link", { name: "Open budgets" }),
     ).toBeVisible();
     await expectAccessible(page);
   });

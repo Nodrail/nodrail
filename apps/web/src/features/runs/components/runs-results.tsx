@@ -1,3 +1,4 @@
+import { docsUrl } from "@/features/guidance/docs-url";
 import { EmptyState } from "@/components/app/card";
 import { Button } from "@/components/ui/button";
 import { DataPanel, ListPager } from "@/components/app/data-table";
@@ -40,13 +41,13 @@ export async function RunsResults({
         title="No runs yet"
         action={
           <Button asChild variant="outline">
-            <a href="/docs/runs">How runs work</a>
+            <a href={docsUrl("runs")}>How runs work</a>
           </Button>
         }
       >
-        A run is one job an agent team works on, such as a branch or an issue,
-        with every step and action in it. Runs start when an integration sends
-        its intents with a run key and reports the steps its agents take.
+        A first tool decision can create a run for a job such as a branch or an
+        issue. The run shows its decisions as they arrive. Step reporting
+        depends on the host and integration.
       </EmptyState>
     );
 

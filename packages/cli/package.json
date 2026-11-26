@@ -1,6 +1,6 @@
 {
   "name": "@nodrail/cli",
-  "version": "0.6.0",
+  "version": "0.7.1",
   "description": "Nodrail, the open control plane for AI agent development: declare agents and rules in nodrail.yaml, then plan and apply them on Claude Code, Codex and Copilot.",
   "keywords": [
     "ai",
@@ -16,18 +16,17 @@
     "cli",
     "nodrail"
   ],
-  "homepage": "https://github.com/Nodrail/nodrail-js/tree/main/packages/cli#readme",
+  "homepage": "https://github.com/Nodrail/nodrail/tree/main/packages/cli#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nodrail/nodrail-js.git",
+    "url": "git+https://github.com/Nodrail/nodrail.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/Nodrail/nodrail-js/issues",
+    "url": "https://github.com/Nodrail/nodrail/issues",
     "email": "hello@nodrail.com"
   },
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { encodeSpans, type SpanRecord } from "../src/otlp";
 import {
   decisionSpan,
@@ -450,14 +450,19 @@ describe("the hook's observer", () => {
   });
 
   test.each([
-    ["git status", false],
-    ["git push", true],
+    ["git status", false, "not a directory"],
+    ["git status", false, "malformed"],
+    ["git push", true, "malformed"],
   ])(
-    "a machine id that can't be kept leaves `%s` as the rules decide",
-    async (command, denied) => {
-      // ~/.nodrail is a file: the machine id has nowhere to go.
+    "a machine id that can't be kept leaves `%s` (denied: %s) as the rules decide when %s",
+    async (command, denied, problem) => {
       const home = mkdtempSync(join(tmpdir(), "nodrail-home-"));
-      writeFileSync(join(home, ".nodrail"), "");
+      const directory = join(home, ".nodrail");
+      const machine = join(directory, "machine-id");
+      if (problem === "malformed") {
+        mkdirSync(directory);
+        writeFileSync(machine, "damaged");
+      } else writeFileSync(directory, "");
       const { project, file } = unreachableTelemetry();
       const rules = join(project, "rules.yaml");
       writeFileSync(
@@ -480,6 +485,8 @@ describe("the hook's observer", () => {
         expect(answer.stderr).toContain(
           "telemetry is off: can't keep this machine's id",
         );
+        if (problem === "malformed")
+          expect(readFileSync(machine, "utf8")).toBe("damaged");
       } finally {
         restoreHome();
       }
@@ -489,6 +496,10 @@ describe("the hook's observer", () => {
   test("records what the host was told, and a failure only warns", () => {
     const home = mkdtempSync(join(tmpdir(), "nodrail-home-"));
     const { file } = unreachableTelemetry();
+    const machine = "12345678-90ab-4def-8fed-cba987654321";
+    const machineFile = join(home, ".nodrail", "machine-id");
+    mkdirSync(dirname(machineFile));
+    writeFileSync(machineFile, `${machine}\n`);
     const restoreHome = homeAt(home);
     const warnings: string[] = [];
     try {
@@ -511,14 +522,18 @@ describe("the hook's observer", () => {
       });
       for (const stdout of ["", denied, "not json"])
         observer.observe({ judged: judged(stdout), event: null, agent: null });
-      const told = readFileSync(join(folder, "spool.jsonl"), "utf8")
+      const spans = readFileSync(join(folder, "spool.jsonl"), "utf8")
         .trim()
         .split("\n")
-        .map(
-          (line) =>
-            (JSON.parse(line) as SpanRecord).attributes["nodrail.decision"],
-        );
-      expect(told).toEqual(["allow", "deny", "deny"]);
+        .map((line) => (JSON.parse(line) as SpanRecord).attributes);
+      expect(spans.map((span) => span["nodrail.decision"])).toEqual([
+        "allow",
+        "deny",
+        "deny",
+      ]);
+      for (const span of spans)
+        expect(span["nodrail.machine"]).toBe(machine.replaceAll("-", ""));
+      expect(readFileSync(machineFile, "utf8")).toBe(`${machine}\n`);
       // The queue can't be written: the decision stands, with a warning.
       rmSync(folder, { recursive: true });
       writeFileSync(folder, "");
@@ -539,6 +554,49 @@ describe("secret references", () => {
     expect(secretValue(ref, { OTLP_TOKEN: "v" })).toBe("v");
     expect(() => secretValue(ref, {})).toThrow("OTLP_TOKEN isn't set");
   });
+
+  test("macOS probes the Keychain and retrieves a value without its trailing newline", () => {
+    const ref = { fromKeychain: { service: "nodrail", account: "operator" } };
+    const execute = vi.fn(() => "fixture-value\n");
+    const keychain = { platform: "darwin", execute } as const;
+    expect(hasSecret(ref, {}, keychain)).toBe(true);
+    expect(secretValue(ref, {}, 250, keychain)).toBe("fixture-value");
+    const args = ["find-generic-password", "-s", "nodrail", "-a", "operator"];
+    expect(execute).toHaveBeenNthCalledWith(
+      1,
+      "/usr/bin/security",
+      args,
+      expect.objectContaining({ stdio: "ignore" }),
+    );
+    expect(execute).toHaveBeenNthCalledWith(
+      2,
+      "/usr/bin/security",
+      [...args, "-w"],
+      expect.objectContaining({ timeout: 250 }),
+    );
+    execute.mockImplementation(() => {
+      throw new Error("missing");
+    });
+    expect(
+      hasSecret({ fromKeychain: { service: "nodrail" } }, {}, keychain),
+    ).toBe(false);
+    expect(() => secretValue(ref, {}, undefined, keychain)).toThrow(
+      "Keychain nodrail/operator isn't in the Keychain",
+    );
+  });
+
+  test.each(["linux", "win32"] as const)(
+    "Keychain references on %s never spawn security",
+    (platform) => {
+      const ref = { fromKeychain: { service: "nodrail" } };
+      const execute = vi.fn();
+      expect(hasSecret(ref, {}, { platform, execute })).toBe(false);
+      expect(() =>
+        secretValue(ref, {}, undefined, { platform, execute }),
+      ).toThrow("Keychain references work on macOS only");
+      expect(execute).not.toHaveBeenCalled();
+    },
+  );
 
   test("from the Keychain: named by service and account; absent is an error naming it", () => {
     const ref = {

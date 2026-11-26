@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import type { ManagedSource } from "@/contracts/v1/public-api";
 import { requireCapability, type WorkspaceContext } from "@/server/db/context";
 import type { RuntimeContext } from "@/server/db/runtime-context";
+import { hasPolicyLock } from "./policy-workspace-lock";
+import { policyOwner } from "./project-owner";
 import { findEnvironment } from "@/server/modules/workspaces";
 
 /**
@@ -11,14 +13,18 @@ import { findEnvironment } from "@/server/modules/workspaces";
  */
 
 /** The project and lock the live version came from, or null. */
-async function liveSource(context: WorkspaceContext, environmentId: string) {
+export async function liveSource(
+  context: WorkspaceContext,
+  environmentId: string,
+) {
   const [row]: {
     managed_project_id: string | null;
     managed_revision: string | null;
     managed_policy_revision: string | null;
     source_digest: string | null;
+    managed_agent_keys: string[] | null;
   }[] = await context.manager.query(
-    `SELECT v.managed_project_id, v.managed_revision, v.managed_policy_revision, v.source_digest
+    `SELECT v.managed_project_id, v.managed_revision, v.managed_policy_revision, v.source_digest, v.managed_agent_keys
      FROM nodrail.active_policies a
      JOIN nodrail.policy_versions v
        ON v.workspace_id = a.workspace_id AND v.environment_id = a.environment_id
@@ -27,15 +33,24 @@ async function liveSource(context: WorkspaceContext, environmentId: string) {
     [context.workspaceId, environmentId],
   );
   return {
-    managed:
-      row?.managed_project_id && row.managed_revision
-        ? {
-            project_id: row.managed_project_id,
-            revision: row.managed_revision,
-            policy_revision: row.managed_policy_revision,
-          }
-        : null,
+    managed: managedMetadata(row),
     source_digest: row?.source_digest ?? null,
+    managed_agent_keys: row?.managed_agent_keys ?? null,
+  };
+}
+
+type ManagedRow = {
+  managed_project_id: string | null;
+  managed_revision: string | null;
+  managed_policy_revision: string | null;
+};
+
+function managedMetadata(row: ManagedRow | undefined): ManagedSource | null {
+  if (!row?.managed_project_id || !row.managed_revision) return null;
+  return {
+    project_id: row.managed_project_id,
+    revision: row.managed_revision,
+    policy_revision: row.managed_policy_revision,
   };
 }
 
@@ -60,8 +75,16 @@ export async function nothingToPublish(
   if (!origin.managed) return true;
   const live = await liveSource(context, environmentId);
   return (
-    sameSource(live.managed, origin.managed) &&
-    live.source_digest === sourceColumns(origin).sourceDigest
+    // Declarative projects record host setup changes in the intended revision.
+    // The policy version retains the source and lock it was published from.
+    (origin.agentKeys
+      ? live.managed?.project_id === origin.managed.project_id &&
+        live.managed.policy_revision === origin.managed.policy_revision
+      : sameSource(live.managed, origin.managed)) &&
+    live.source_digest === sourceColumns(origin).sourceDigest &&
+    (!origin.agentKeys ||
+      JSON.stringify(live.managed_agent_keys) ===
+        JSON.stringify(origin.agentKeys))
   );
 }
 
@@ -76,6 +99,7 @@ export type Previewed = {
 /** Where a version comes from: the project and lock, and the file. */
 export type VersionOrigin = {
   managed: ManagedSource | null;
+  agentKeys?: string[];
   /** The file it was published from, kept for hosts to fetch. */
   source: string | null;
 };
@@ -94,21 +118,30 @@ export const originOf = (
  * lock apply named, and the file it was published from with its SHA-256,
  * which is the digest a lock records for that file.
  */
-export const sourceColumns = (origin: VersionOrigin | undefined) => ({
-  managedProjectId: origin?.managed?.project_id ?? null,
-  managedRevision: origin?.managed?.revision ?? null,
-  managedPolicyRevision: origin?.managed?.policy_revision ?? null,
-  sourceText: origin?.source ?? null,
-  sourceDigest:
-    origin?.source == null
-      ? null
-      : createHash("sha256").update(origin.source).digest("hex"),
-});
+export function sourceColumns(origin: VersionOrigin | undefined) {
+  const { managed, source, agentKeys } = origin ?? {
+    managed: null,
+    source: null,
+    agentKeys: null,
+  };
+  return {
+    managedProjectId: managed?.project_id ?? null,
+    managedRevision: managed?.revision ?? null,
+    managedPolicyRevision: managed?.policy_revision ?? null,
+    managedAgentKeys: agentKeys ?? null,
+    sourceText: source,
+    sourceDigest:
+      source === null
+        ? null
+        : createHash("sha256").update(source).digest("hex"),
+  };
+}
 
 /** What is live in an environment and where it came from. */
 export async function readLiveVersion(
   context: WorkspaceContext,
   environmentSlug: string,
+  workspaceRevision?: string,
 ) {
   requireCapability(context, "workspace:read");
   const { id: environmentId } = await findEnvironment(context, environmentSlug);
@@ -126,12 +159,20 @@ export async function readLiveVersion(
      WHERE a.workspace_id = $1 AND a.environment_id = $2`,
     [context.workspaceId, environmentId],
   );
+  const source = await liveSource(context, environmentId);
   return {
     environment: environmentSlug,
     policy_revision: row?.revision ?? 0,
     published_at: row?.published_at.toISOString() ?? null,
     published_by: row?.published_by ?? null,
-    ...(await liveSource(context, environmentId)),
+    ...source,
+    ...(workspaceRevision
+      ? {
+          workspace_lock_current:
+            source.managed?.revision === workspaceRevision ||
+            (await hasPolicyLock(context, environmentId, workspaceRevision)),
+        }
+      : {}),
   };
 }
 
@@ -149,32 +190,42 @@ export async function readRuntimePolicy(context: RuntimeContext) {
     managed_revision: string | null;
     managed_policy_revision: string | null;
     source_text: string | null;
+    enrollment_project_id: string | null;
     source_digest: string | null;
   }[] = await context.manager.query(
     `SELECT v.revision, v.published_at, v.managed_project_id,
             v.managed_revision, v.managed_policy_revision,
-            v.source_text, v.source_digest
+            v.source_text, v.source_digest, i.enrollment_project_id
      FROM nodrail.active_policies a
      JOIN nodrail.policy_versions v
        ON v.workspace_id = a.workspace_id AND v.environment_id = a.environment_id
       AND v.id = a.policy_version_id
+     JOIN nodrail.installations i
+       ON i.workspace_id = a.workspace_id AND i.environment_id = a.environment_id AND i.id = $3
      WHERE a.workspace_id = $1 AND a.environment_id = $2`,
-    [context.workspaceId, context.environmentId],
+    [context.workspaceId, context.environmentId, context.installationId],
   );
-  return {
+  const policy = {
     policy_revision: row?.revision ?? 0,
     published_at: row?.published_at.toISOString() ?? null,
-    managed:
-      row?.managed_project_id && row.managed_revision
-        ? {
-            project_id: row.managed_project_id,
-            revision: row.managed_revision,
-            policy_revision: row.managed_policy_revision,
-          }
-        : null,
+    managed: managedMetadata(row),
     source:
       row?.source_text != null && row.source_digest
         ? { digest: row.source_digest, text: row.source_text }
         : null,
+  };
+  const enrolled = row?.enrollment_project_id;
+  if (!enrolled || enrolled === row.managed_project_id) return policy;
+  const owner =
+    row.managed_project_id ??
+    (await policyOwner(context, context.environmentId))?.project_id;
+  return {
+    ...policy,
+    managed: null,
+    source: null,
+    denial_reason:
+      owner && owner !== enrolled
+        ? `live policy is now owned by project ${owner}`
+        : "the environment no longer serves this project's locked policy",
   };
 }

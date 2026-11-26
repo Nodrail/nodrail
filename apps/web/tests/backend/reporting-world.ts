@@ -115,6 +115,7 @@ export async function postJson(
   path: string,
   token: string,
   body: unknown,
+  headers?: Record<string, string>,
 ) {
   const response = await route(
     new NextRequest(`http://localhost/api/v1/${path}`, {
@@ -122,6 +123,7 @@ export async function postJson(
       headers: {
         authorization: `Bearer ${token}`,
         "content-type": "application/json",
+        ...headers,
       },
       body: JSON.stringify(body),
     }),

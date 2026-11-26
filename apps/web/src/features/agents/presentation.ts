@@ -67,3 +67,12 @@ export function avatarTone(key: string) {
   for (const char of key) hash = (hash + char.charCodeAt(0)) % 997;
   return avatarTones[hash % avatarTones.length];
 }
+
+/** Enrollment supplies a project name for agents declared in a repository. */
+export function agentProject(agent: {
+  key: string;
+  projectName?: string | null;
+  project?: string | null;
+}) {
+  return agent.project ? `from ${agent.projectName ?? agent.project}` : null;
+}

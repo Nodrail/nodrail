@@ -1,11 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { track } from "@/components/analytics/posthog";
 import { ActionForm } from "@/components/app/action-form";
 import { Card } from "@/components/app/card";
 import { ChoiceRow } from "@/components/app/choice-field";
-import { SubmitButton } from "@/components/app/form-feedback";
+import { FormFooter, SubmitButton } from "@/components/app/form-feedback";
 import { FormField } from "@/components/app/form-field";
 import { Note } from "@/components/app/note";
 import { useAppAction } from "@/components/app/use-app-action";
@@ -18,16 +17,18 @@ function AdapterOptions() {
   return (
     <fieldset className="stagger grid gap-1.75">
       <legend className="sr-only">Runtime</legend>
-      {adapters.map((adapter, index) => (
-        <ChoiceRow
-          key={adapter.key}
-          name="adapterKey"
-          value={adapter.key}
-          defaultChecked={index === 0}
-          title={adapter.label}
-          detail={adapter.detail}
-        />
-      ))}
+      {adapters
+        .filter(({ key }) => key !== "codex-hook")
+        .map((adapter, index) => (
+          <ChoiceRow
+            key={adapter.key}
+            name="adapterKey"
+            value={adapter.key}
+            defaultChecked={index === 0}
+            title={adapter.label}
+            detail={adapter.detail}
+          />
+        ))}
     </fieldset>
   );
 }
@@ -56,13 +57,7 @@ function Step({
 }
 
 /** Step 2's fields: the agent's ID and what it does. */
-function IdentityFields({
-  initialKey,
-  error,
-}: {
-  initialKey: string;
-  error: string | null;
-}) {
+function IdentityFields({ initialKey }: { initialKey: string }) {
   return (
     <>
       <div className="grid gap-3.5">
@@ -75,7 +70,6 @@ function IdentityFields({
           autoComplete="off"
           maxLength={58}
           required
-          error={error}
         />
         <FormField
           id="description"
@@ -88,18 +82,16 @@ function IdentityFields({
         />
       </div>
       <Note>
-        <b>Unknown actions stay blocked.</b> An unidentifiable or uncovered call
-        waits for an explicit decision.
+        <b>Unknown actions stay blocked.</b> The hook denies uncovered calls and
+        returns the reason.
       </Note>
     </>
   );
 }
 
 /**
- * Connecting an agent in three numbered steps: how it connects, its ID, then
- * connecting and installing. Once connected, the credential and install
- * steps replace the form, with the first check-in and the checks to run
- * following live.
+ * Standalone setup collects the host and agent ID, then shows the credential
+ * and installation instructions. The first check-in updates the status.
  */
 export function ConnectAgentForm({
   workspace,
@@ -118,10 +110,6 @@ export function ConnectAgentForm({
 }) {
   const [state, action, pending] = useAppAction<ConnectedAgentDto>(
     connectAgentAction.bind(null, workspace, environmentSlug),
-    (result) => {
-      if (result.data)
-        track("agent_connected", { adapter: result.data.adapterKey });
-    },
   );
 
   if (state.status === "ok" && state.data)
@@ -131,7 +119,6 @@ export function ConnectAgentForm({
         environmentName={environmentName}
         agentsPath={agentsPath}
         serverUrl={serverUrl}
-        place={{ workspace, environment: environmentSlug }}
       />
     );
 
@@ -140,7 +127,7 @@ export function ConnectAgentForm({
       <ol className="grid gap-3">
         <Step
           number={1}
-          tour="connect-runtime"
+          tour="standalone-runtime"
           title="Choose its host"
           description="Where your agent runs. The setup steps are written for it."
         >
@@ -148,24 +135,23 @@ export function ConnectAgentForm({
         </Step>
         <Step
           number={2}
-          tour="connect-identity"
+          tour="standalone-identity"
           title="Name it"
           description="Use the same ID in the agent's configuration. Its rules and activity are listed under it."
         >
-          <IdentityFields
-            initialKey={initialKey}
-            error={state.status === "error" ? state.message : null}
-          />
+          <IdentityFields initialKey={initialKey} />
         </Step>
         <Step
           number={3}
-          tour="connect-submit"
-          title="Connect and set up"
+          tour="standalone-submit"
+          title="Create a standalone credential"
           description="You get a credential, shown once, and the steps to set up the host. Then the checks to run, ticked as they show."
         >
-          <SubmitButton size="lg" pending={pending} pendingLabel="Connecting…">
-            Connect agent
-          </SubmitButton>
+          <FormFooter state={state}>
+            <SubmitButton size="lg" pending={pending} pendingLabel="Creating…">
+              Create credential
+            </SubmitButton>
+          </FormFooter>
         </Step>
       </ol>
       <CoverageLimits />

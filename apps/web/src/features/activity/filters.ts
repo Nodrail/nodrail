@@ -31,6 +31,7 @@ export function readActivityParams(raw: RawParams) {
     run: first(raw.run),
     range: first(raw.range),
     q: first(raw.q),
+    check_token: first(raw.check_token),
     cursor: first(raw.cursor),
   });
   return {
@@ -46,7 +47,9 @@ export function filtersFor(
   view: ActivityView,
 ): ActivityQuery {
   if (view === "local") return activityQuery.parse({});
-  return view === "runs" ? { ...query, kind: "all", run: "" } : query;
+  return view === "runs"
+    ? { ...query, kind: "all", run: "", check_token: undefined }
+    : query;
 }
 
 /** A link to Activity. Filters left at their default stay out of the URL. */
@@ -55,10 +58,8 @@ export function activityHref(
   query: ActivityQuery,
   view: ActivityView = "events",
 ) {
-  const { kind, outcome, agent, run, range, q, cursor } = filtersFor(
-    query,
-    view,
-  );
+  const { kind, outcome, agent, run, range, q, check_token, cursor } =
+    filtersFor(query, view);
   const params = new URLSearchParams();
   if (view !== "events") params.set("view", view);
   if (kind !== "all") params.set("kind", kind);
@@ -67,6 +68,7 @@ export function activityHref(
   if (run) params.set("run", run);
   if (range !== "all") params.set("range", range);
   if (q) params.set("q", q);
+  if (check_token) params.set("check_token", check_token);
   if (cursor) params.set("cursor", cursor);
   const search = params.toString();
   return search ? `${path}?${search}` : path;
@@ -79,9 +81,18 @@ export function isFiltered(
   query: ActivityQuery,
   view: ActivityView = "events",
 ) {
-  const { kind, outcome, agent, run, range, q } = filtersFor(query, view);
+  const { kind, outcome, agent, run, range, q, check_token } = filtersFor(
+    query,
+    view,
+  );
   return Boolean(
-    kind !== "all" || outcome !== "all" || agent || run || range !== "all" || q,
+    kind !== "all" ||
+    outcome !== "all" ||
+    agent ||
+    run ||
+    range !== "all" ||
+    q ||
+    check_token,
   );
 }
 

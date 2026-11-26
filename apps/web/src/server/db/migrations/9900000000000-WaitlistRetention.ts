@@ -3,6 +3,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
 /** Lets the retention job honour the privacy notice's 12 months, and nothing else. */
 export class WaitlistRetention9900000000000 implements MigrationInterface {
   async up(queryRunner: QueryRunner) {
+    if (!(await queryRunner.hasTable("public.waitlist_subscribers"))) return;
     await queryRunner.query(
       "GRANT SELECT (id, created_at), DELETE ON public.waitlist_subscribers TO nodrail_maintenance",
     );
@@ -13,6 +14,7 @@ export class WaitlistRetention9900000000000 implements MigrationInterface {
   }
 
   async down(queryRunner: QueryRunner) {
+    if (!(await queryRunner.hasTable("public.waitlist_subscribers"))) return;
     await queryRunner.query(
       "DROP POLICY maintenance ON public.waitlist_subscribers",
     );

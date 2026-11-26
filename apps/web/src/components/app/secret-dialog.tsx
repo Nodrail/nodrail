@@ -15,6 +15,7 @@ export function SecretDialog({
   secretLabel,
   secret,
   onDone,
+  instructions,
   children,
 }: {
   dialogLabel: string;
@@ -22,6 +23,7 @@ export function SecretDialog({
   secretLabel: string;
   secret: string;
   onDone: () => void;
+  instructions?: ReactNode;
   children?: ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -30,7 +32,11 @@ export function SecretDialog({
     <AppDialog ref={dialog} aria-label={dialogLabel} onClose={onDone}>
       <DialogHeading>{title}</DialogHeading>
       {children}
-      <SecretReveal label={secretLabel} secret={secret}>
+      <SecretReveal
+        label={secretLabel}
+        secret={secret}
+        instructions={instructions}
+      >
         <Button
           type="button"
           variant="outline"

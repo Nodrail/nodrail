@@ -126,6 +126,24 @@ test.describe("the app shell", () => {
     ).toBe("72px");
   });
 
+  test("switching from Runs and visiting account settings keeps the environment", async ({
+    page,
+  }) => {
+    const { base } = await startWorkspace(page, `Environment ${Date.now()}`);
+    const production = base.replace(/development$/, "production");
+    await page.goto(`${base}/activity?view=runs&agent=unknown`);
+    const menu = page.locator("[data-slot=workspace-menu]");
+    await menu.locator("> summary").click();
+    await menu.getByRole("link", { name: "Production" }).click();
+    await expect(page).toHaveURL(`${production}/activity?view=runs`);
+
+    await page.getByLabel(/your account/i).click();
+    await page.getByRole("link", { name: "API tokens" }).click();
+    await expect(
+      sidebar(page).getByRole("link", { name: "Policies" }),
+    ).toHaveAttribute("href", `${production}/policies`);
+  });
+
   test("Production is marked apart from Development", async ({ page }) => {
     const { base } = await startWorkspace(page, `Tone ${Date.now()}`);
     const chip = page.locator("[data-slot=environment-context]");

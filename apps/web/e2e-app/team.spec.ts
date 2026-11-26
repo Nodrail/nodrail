@@ -92,7 +92,10 @@ test.describe("invitations", () => {
     await guest.getByRole("button", { name: /^Join / }).click();
     await guest.waitForURL(/\/overview$/);
     await expect(
-      guest.getByRole("heading", { name: "No agents are assigned to you yet" }),
+      guest.getByRole("heading", { name: "First steps" }),
+    ).toBeVisible();
+    await expect(
+      guest.getByRole("link", { name: "Connect a project" }),
     ).toBeVisible();
 
     await page.goto(workspacePage(base, "settings/members"));
@@ -359,7 +362,7 @@ const WORKSPACE_PAGES = [
 type Expected = {
   agents: string[];
   writeRules: boolean;
-  connect: boolean;
+  standalone: boolean;
   invite: boolean;
   editWorkspace: boolean;
 };
@@ -373,7 +376,7 @@ const matrix: [string, string | null, Expected][] = [
     {
       agents: everyAgent,
       writeRules: true,
-      connect: true,
+      standalone: true,
       invite: true,
       editWorkspace: true,
     },
@@ -384,7 +387,7 @@ const matrix: [string, string | null, Expected][] = [
     {
       agents: everyAgent,
       writeRules: true,
-      connect: true,
+      standalone: true,
       invite: true,
       editWorkspace: true,
     },
@@ -395,7 +398,7 @@ const matrix: [string, string | null, Expected][] = [
     {
       agents: everyAgent,
       writeRules: true,
-      connect: false,
+      standalone: false,
       invite: false,
       editWorkspace: false,
     },
@@ -406,7 +409,7 @@ const matrix: [string, string | null, Expected][] = [
     {
       agents: ["mine"],
       writeRules: false,
-      connect: false,
+      standalone: false,
       invite: false,
       editWorkspace: false,
     },
@@ -458,9 +461,19 @@ test.describe("what each role sees", () => {
         if (expected.agents.includes(key)) await expect(link).toBeVisible();
         else await expect(link).toHaveCount(0);
       }
-      await expect(person.getByRole("link", { name: /connect/i })).toHaveCount(
-        expected.connect ? 1 : 0,
-      );
+      const connectProject = person.getByRole("link", {
+        name: "Connect a project",
+      });
+      await expect(connectProject).toHaveCount(expected.writeRules ? 1 : 0);
+      if (expected.writeRules) {
+        await connectProject.click();
+        await expect(person).toHaveURL(/\/agents\/connect$/);
+        await expect(
+          person.getByText("Standalone plugin, manual hook or SDK", {
+            exact: true,
+          }),
+        ).toHaveCount(expected.standalone ? 1 : 0);
+      }
 
       // Each agent this person sees has its decision on Overview; nothing
       // waits for anyone to decide.

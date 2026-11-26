@@ -100,6 +100,7 @@ export class BudgetLease {
   @Text() bodyDigest!: string;
   @Text() policyDigest!: string;
   @OptionalUuid() claimId!: string | null;
+  @OptionalUuid() agentId!: string | null;
   @Json("{}") response!: object;
   @Fk(() => Installation, inWorkspace("installation_id"))
   installation!: Relation<Installation>;

@@ -2,7 +2,7 @@ import "server-only";
 import type { EntityManager } from "typeorm";
 import {
   API_CALLS_PER_MINUTE,
-  scopeCapability,
+  capabilitiesForToken,
   type ApiTokenScope,
 } from "@/contracts/v1/api-tokens";
 import { matchesDigest } from "@/server/security/secrets";
@@ -31,7 +31,6 @@ export type TokenDetails = {
 };
 
 export type TokenContext = WorkspaceContext & {
-  principal: TokenPrincipal;
   token: TokenDetails;
 };
 
@@ -109,7 +108,7 @@ async function countCall(
 
 /** What the person's role grants now, limited to what the token was given. */
 function narrowed(context: WorkspaceContext, scopes: ApiTokenScope[]) {
-  const allowed = new Set(scopes.map((scope) => scopeCapability[scope]));
+  const allowed = capabilitiesForToken(scopes);
   return new Set(
     [...context.capabilities].filter((capability) => allowed.has(capability)),
   );
@@ -172,7 +171,7 @@ export async function withPersonalToken<T>(
     const found = await authenticated(manager, { prefix, secret });
     await countCall(manager, workspaceId, found.id);
     if (!found.scopes.includes(needs.scope))
-      throw new AppError("INSUFFICIENT_SCOPE");
+      throw new AppError("INSUFFICIENT_SCOPE", `Requires ${needs.scope}.`);
     return found.user_id;
   });
 

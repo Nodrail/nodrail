@@ -121,22 +121,6 @@ export async function createTestDatabase(database: string, appRole: string) {
   await client.end();
 }
 
-/** Reverts the latest migration as the given owner, as an operator would. */
-export function revertMigration(ownerUrl: string) {
-  execFileSync(
-    "node",
-    [
-      "--import",
-      "tsx",
-      "node_modules/typeorm/cli.js",
-      "migration:revert",
-      "-d",
-      "typeorm.config.ts",
-    ],
-    { cwd: web, env: { ...process.env, MIGRATION_DATABASE_URL: ownerUrl } },
-  );
-}
-
 /**
  * Reverts every migration from the latest down to and including `name`, on a
  * database at the latest version. Counted from the migration files, so a new
@@ -148,7 +132,16 @@ export function revertMigrationsThrough(ownerUrl: string, name: string) {
     .sort();
   const at = files.findIndex((file) => file.endsWith(`-${name}.ts`));
   if (at < 0) throw new Error(`No migration named ${name}`);
-  for (let i = files.length; i > at; i -= 1) revertMigration(ownerUrl);
+  execFileSync(
+    "node",
+    [
+      "--import",
+      "tsx",
+      "tests/support/revert-migrations.ts",
+      String(files.length - at),
+    ],
+    { cwd: web, env: { ...process.env, MIGRATION_DATABASE_URL: ownerUrl } },
+  );
 }
 
 /**

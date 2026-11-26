@@ -27,6 +27,8 @@ import {
   updateWorkspaceSettings,
 } from "@/server/modules/workspaces";
 import { settingsPath } from "@/features/shell/navigation";
+import { tokenInputFromForm } from "./token-input";
+import { workspaceSettingsInput } from "@/contracts/v1/team";
 import { appPath } from "@/lib/product-path";
 
 export async function saveWorkspaceAction(
@@ -34,14 +36,25 @@ export async function saveWorkspaceAction(
   _previous: ActionResult,
   data: FormData,
 ): Promise<ActionResult> {
+  const parsed = workspaceSettingsInput.safeParse({
+    name: data.get("name"),
+    defaultEnvironment: data.get("defaultEnvironment"),
+  });
+  if (!parsed.success)
+    return {
+      status: "error",
+      message:
+        parsed.error.issues[0]?.path[0] === "name"
+          ? "Enter a workspace name of up to 120 characters."
+          : "Choose a default environment.",
+    };
   const result = await runWorkspaceAction(
     workspace,
-    (context) =>
-      updateWorkspaceSettings(context, {
-        name: data.get("name"),
-        defaultEnvironment: data.get("defaultEnvironment"),
-      }),
-    { INVALID_INPUT: "Enter a workspace name of up to 120 characters." },
+    (context) => updateWorkspaceSettings(context, parsed.data),
+    {
+      INVALID_INPUT:
+        "The selected environment is no longer available. Reload and choose another.",
+    },
   );
   return result.status === "ok"
     ? { status: "ok", message: "Workspace saved." }
@@ -206,17 +219,14 @@ export async function createApiTokenAction(
   _previous: ActionResult<IssuedApiTokenDto>,
   data: FormData,
 ): Promise<ActionResult<IssuedApiTokenDto>> {
+  const parsed = tokenInputFromForm(data);
+  if (!parsed.ok) return { status: "error", message: parsed.message };
   const result = await runWorkspaceAction(
     workspace,
-    (context) =>
-      createApiToken(context, {
-        name: data.get("name"),
-        scopes: data.getAll("scopes"),
-        expiresInDays: data.get("expiresInDays"),
-      }),
+    (context) => createApiToken(context, parsed.input),
     {
       FORBIDDEN: "Your role can't give a token that scope.",
-      INVALID_INPUT: `Name the token in up to 60 characters. You can have up to ${MAX_LIVE_TOKENS} live tokens.`,
+      INVALID_INPUT: `You have ${MAX_LIVE_TOKENS} live tokens. Revoke one before creating another.`,
     },
   );
   return result.status === "ok"

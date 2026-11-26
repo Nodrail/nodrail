@@ -1,5 +1,6 @@
 "use client";
 
+import { RepositoryPublishWarning } from "./repository-policy";
 import { Card } from "@/components/app/card";
 import type { ImpactChange } from "@/contracts/v1/policy-impact";
 import { impactText } from "../summary";
@@ -51,6 +52,7 @@ export function PublishPreview({
       <p data-slot="policy-impact" role="status" className="text-ui text-body">
         {stateText(kind, state, environmentName)}
       </p>
+      <RepositoryPublishWarning />
     </Card>
   );
 }

@@ -76,6 +76,9 @@ export type AgentAccessDto = {
 };
 
 export type InstallationDto = {
+  disconnected: boolean;
+  machineKey: string | null;
+  machinePaused: boolean;
   id: string;
   name: string;
   environment: { slug: string; name: string };
@@ -90,7 +93,11 @@ export type AgentListItemDto = {
   key: string;
   description: string | null;
   access: AgentAccessDto;
-  installation: InstallationDto;
+  project: string | null;
+  projectName: string | null;
+  entryAgent?: string | null;
+  installation: InstallationDto | null;
+  installations: InstallationDto[];
   tools: string[];
 };
 
@@ -112,6 +119,9 @@ export type ObservedActionDto = {
 };
 
 export type AgentDetailDto = {
+  project: string | null;
+  projectName: string | null;
+  entryAgent?: string | null;
   key: string;
   description: string | null;
   access: AgentAccessDto;

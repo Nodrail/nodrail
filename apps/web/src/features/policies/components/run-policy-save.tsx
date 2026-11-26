@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepositoryProject } from "./repository-policy";
+
 import { useRouter } from "next/navigation";
 import { track } from "@/components/analytics/posthog";
 import type { ActionResult } from "@/components/app/action-result";
@@ -34,6 +36,7 @@ export function useSave(
   fromForm: (data: FormData) => unknown,
 ) {
   const router = useRouter();
+  const project = useRepositoryProject();
   const [state, submit, pending] = useAppAction(
     (_previous, data) =>
       changeRunPolicyAction(
@@ -41,6 +44,7 @@ export function useSave(
         where.environment,
         { ...change, entry: fromForm(data) } as RunPolicyChange,
         where.revision,
+        project?.id ?? null,
       ),
     () => {
       track(`${change.kind}_${change.id ? "updated" : "created"}`);

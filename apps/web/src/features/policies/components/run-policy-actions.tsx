@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  RepositoryPublishWarning,
+  useRepositoryProject,
+} from "./repository-policy";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { track } from "@/components/analytics/posthog";
@@ -27,6 +31,7 @@ export function RunPolicyActions({
   name: string;
 }) {
   const router = useRouter();
+  const project = useRepositoryProject();
   const edit = `${listPath}/${id}/edit`;
   const noun = kind === "gate" ? "gate" : "budget";
   return (
@@ -54,19 +59,23 @@ export function RunPolicyActions({
                   environment,
                   { kind, id, entry: null },
                   revision,
+                  project?.id ?? null,
                 ),
               onSuccess: () => {
                 track(`${kind}_removed`);
                 router.refresh();
               },
               children: (
-                <p>
-                  {kind === "gate"
-                    ? "The action no longer waits for these steps. Your rules still decide it."
-                    : "Runs are no longer stopped by this limit."}{" "}
-                  This publishes a new policy version; earlier versions stay in
-                  history.
-                </p>
+                <>
+                  <p>
+                    {kind === "gate"
+                      ? "Future calls will be decided without this gate’s step conditions."
+                      : "Runs are no longer stopped by this limit."}{" "}
+                    This publishes a new policy version; earlier versions stay
+                    in history.
+                  </p>
+                  <RepositoryPublishWarning />
+                </>
               ),
             },
           },

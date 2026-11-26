@@ -1,16 +1,22 @@
+import { createServer } from "node:net";
 import { randomUUID } from "node:crypto";
 import { describe, expect, test, vi } from "vitest";
-import { withRuntime, withWorkspace } from "@/server/db/context";
+import * as contexts from "@/server/db/context";
+import { asSystem, withRuntime, withWorkspace } from "@/server/db/context";
 import { Installation, NotificationPreferences } from "@/server/db/entities";
 import { NotificationOutbox } from "@/server/db/notification-entities";
+import { eraseAccount } from "@/server/modules/account";
 import { pauseAgent } from "@/server/modules/agents";
+import { transferOwnership } from "@/server/modules/team/members";
 import { submitAction } from "@/server/modules/runtime";
 import {
   deliverNotifications,
   queueStaleIntegrationAlerts,
 } from "@/server/notifications/delivery";
+import { deliverNextNotification } from "@/server/notifications/notification-claims";
 import type { OutgoingEmail, SendEmail } from "@/server/notifications/mailer";
 import { sendEmail } from "@/server/notifications/mailer";
+import { enqueueNotification } from "@/server/notifications/outbox";
 import {
   addMember,
   admin,
@@ -118,6 +124,142 @@ describe("who is told", () => {
   });
 });
 
+test("an enqueue rechecks recipients when erasure commits after selection", async () => {
+  const w = await createWorkspace();
+  const person = await addMember(w, "policy_manager");
+  await asSystem(w.id, async (scope) => {
+    const query = scope.manager.query.bind(scope.manager);
+    let erased = false;
+    const spy = vi
+      .spyOn(scope.manager, "query")
+      .mockImplementation(async (sql, parameters) => {
+        const result: unknown = await query(sql, parameters);
+        if (!erased && sql.includes("SELECT m.user_id, u.verified_email")) {
+          expect(result).toContainEqual({
+            user_id: person.userId,
+            verified_email: person.email,
+          });
+          erased = true;
+          await eraseAccount(person, person.email);
+        }
+        return result;
+      });
+    try {
+      await enqueueNotification(scope, {
+        kind: "integration_stale",
+        agentId: null,
+        dedupe: "erase-race",
+        payload: {
+          workspace: "Workspace",
+          environment: "Development",
+          agent: "machine",
+          subject: "Machine",
+          reference: null,
+          path: "/",
+          expiresAt: null,
+        },
+      });
+      expect(erased).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+  expect(await recipients(w)).toEqual([w.owner.userId]);
+  expect(await outbox().findBy({ recipientEmail: person.email })).toEqual([]);
+});
+
+const staleNotice = {
+  kind: "integration_stale" as const,
+  agentId: null,
+  dedupe: "concurrent-notice",
+  payload: {
+    workspace: "Workspace",
+    environment: "Development",
+    agent: "machine",
+    subject: "Machine",
+    reference: null,
+    path: "/",
+    expiresAt: null,
+  },
+};
+
+test("recipient recheck can run alongside ownership transfer", async () => {
+  const w = await createWorkspace();
+  const second = await addMember(w, "admin");
+  const [incoming, owner] = [w.owner, second].sort((a, b) =>
+    a.userId.localeCompare(b.userId),
+  );
+  if (owner === second)
+    await withWorkspace(w.owner, w.id, (context) =>
+      transferOwnership(context, owner!.userId),
+    );
+  const tookIncoming = Promise.withResolvers<void>();
+  const enteredTransfer = Promise.withResolvers<void>();
+  const enqueue = asSystem(w.id, async (scope) => {
+    const query = scope.manager.query.bind(scope.manager);
+    const spy = vi
+      .spyOn(scope.manager, "query")
+      .mockImplementation(async (sql, parameters) => {
+        const rows: unknown = await query(sql, parameters);
+        if (
+          sql.includes("SELECT user_id FROM nodrail.workspace_memberships") &&
+          Array.isArray(parameters) &&
+          parameters[1] === incoming!.userId
+        ) {
+          tookIncoming.resolve();
+          await enteredTransfer.promise;
+        }
+        return rows;
+      });
+    try {
+      await enqueueNotification(scope, staleNotice);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+  const transfer = tookIncoming.promise.then(() =>
+    withWorkspace(owner!, w.id, (context) => {
+      enteredTransfer.resolve();
+      return transferOwnership(context, incoming!.userId);
+    }),
+  );
+  await Promise.all([enqueue, transfer]);
+  expect(await recipients(w)).toEqual([incoming!.userId, owner!.userId]);
+});
+
+test("erasure after claim commit wins before SMTP begins", async () => {
+  const w = await createWorkspace();
+  const person = await addMember(w, "policy_manager");
+  const id = randomUUID();
+  await outbox().insert({
+    id,
+    workspaceId: w.id,
+    kind: "integration_stale",
+    recipientUserId: person.userId,
+    recipientEmail: person.email,
+    dedupeKey: id,
+    availableAt: new Date(0),
+  });
+  const notify = contexts.asNotifier;
+  const spy = vi
+    .spyOn(contexts, "asNotifier")
+    .mockImplementationOnce(async (run) => {
+      const claimed = await notify(run);
+      expect(await outbox().findOneByOrFail({ id })).toMatchObject({
+        state: "sending",
+      });
+      await eraseAccount(person, person.email);
+      return claimed;
+    });
+  const send = vi.fn<SendEmail>();
+  try {
+    expect(await deliverNextNotification(send, origin)).toBe("superseded");
+    expect(send).not.toHaveBeenCalled();
+  } finally {
+    spy.mockRestore();
+  }
+});
+
 describe("what is written", () => {
   test("agent-supplied detail stays out of the email and the outbox", async () => {
     const { w, token, agent } = await scenario(() => Promise.resolve([]));
@@ -219,7 +361,7 @@ describe("delivery failing", () => {
     const { sent, send } = collect(w.owner);
     await deliver(send);
     expect(sent).toHaveLength(0);
-    expect((await state(w)).state).toBe("dropped");
+    expect(await state(w)).toMatchObject({ state: "dropped", attempts: 0 });
   });
 
   test("two workers never send the same row", async () => {
@@ -243,6 +385,77 @@ describe("delivery failing", () => {
     expect(ids.length).toBeGreaterThan(0);
   });
 
+  test("erasure commits during a send longer than the erasure lock timeout", async () => {
+    const w = await createWorkspace();
+    const person = await addMember(w, "policy_manager");
+    const ids = [randomUUID(), randomUUID()];
+    for (const [index, id] of ids.entries())
+      await outbox().insert({
+        id,
+        workspaceId: w.id,
+        kind: "integration_stale",
+        recipientUserId: index === 0 ? person.userId : w.owner.userId,
+        recipientEmail: index === 0 ? person.email : w.owner.email,
+        dedupeKey: id,
+        availableAt: new Date(index),
+      });
+
+    const started = Promise.withResolvers<void>();
+    const finish = Promise.withResolvers<void>();
+    const sent: string[] = [];
+    const delivery = deliverNotifications({
+      batch: 2,
+      origin,
+      send: async ({ messageId }) => {
+        sent.push(messageId);
+        if (messageId !== ids[0]) return;
+        started.resolve();
+        await finish.promise;
+      },
+    });
+    try {
+      await started.promise;
+      expect(await outbox().findOneByOrFail({ id: ids[1] })).toMatchObject({
+        state: "pending",
+        attempts: 0,
+        leaseUntil: null,
+      });
+      const start = performance.now();
+      await eraseAccount(person, person.email);
+      expect(performance.now() - start).toBeLessThan(3_000);
+      await new Promise((resolve) => setTimeout(resolve, 3_100));
+      expect(await outbox().findOneByOrFail({ id: ids[0] })).toMatchObject({
+        state: "dropped",
+        recipientEmail: "erased@invalid",
+        deliveredAt: null,
+      });
+    } finally {
+      finish.resolve();
+      await delivery;
+    }
+    expect(sent).toEqual(ids);
+    expect(await outbox().findOneByOrFail({ id: ids[0] })).toMatchObject({
+      state: "dropped",
+      leaseUntil: null,
+      lastError: "sent before erasure",
+      deliveredAt: expect.any(Date),
+      attempts: 1,
+    });
+    expect(await outbox().findOneByOrFail({ id: ids[1] })).toMatchObject({
+      state: "delivered",
+      attempts: 1,
+    });
+    await deliverNotifications({
+      send: () => {
+        throw new Error("unexpected second send");
+      },
+      origin,
+    });
+    expect(await outbox().findOneByOrFail({ id: ids[0] })).toMatchObject({
+      attempts: 1,
+    });
+  }, 12_000);
+
   test("unconfigured email leaves everything queued", async () => {
     const { w, agent } = await scenario(() => Promise.resolve([]));
     await raise(agent);
@@ -255,6 +468,46 @@ describe("delivery failing", () => {
     vi.unstubAllEnvs();
     expect(await state(w)).toMatchObject({ state: "pending", attempts: 0 });
   });
+});
+
+test("the send deadline aborts an in-flight SMTP socket", async () => {
+  const connected = Promise.withResolvers<void>();
+  const closed = Promise.withResolvers<void>();
+  const server = createServer((socket) => {
+    socket.once("close", () => closed.resolve());
+    connected.resolve();
+    // Hold the greeting until the sender aborts. No message can be accepted.
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string")
+    throw new Error("SMTP listener failed");
+  vi.stubEnv("SMTP_URL", `smtp://127.0.0.1:${address.port}`);
+  vi.stubEnv("NOTIFICATIONS_FROM", "tests@example.test");
+  const controller = new AbortController();
+  try {
+    const sending = sendEmail(
+      {
+        to: "person@example.test",
+        messageId: "deadline",
+        subject: "Test",
+        text: "Test",
+        html: "<p>Test</p>",
+      },
+      controller.signal,
+    );
+    const aborted = expect(sending).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    await connected.promise;
+    controller.abort();
+    await aborted;
+    await closed.promise;
+  } finally {
+    controller.abort();
+    server.close();
+    vi.unstubAllEnvs();
+  }
 });
 
 describe("the delivery role", () => {

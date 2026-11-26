@@ -1,8 +1,8 @@
 import "server-only";
 import { startSharedInput } from "@/contracts/v1/runtime-budgets";
 import { parseInput, type RuntimeContext } from "@/server/db/context";
-import { liveRevision } from "@/server/modules/runtime/policy-revision";
-import { agentAccess } from "@/server/modules/runtime/records";
+import { runtimeCaller } from "@/server/modules/runtime/caller";
+import { budgetRevision } from "@/server/modules/runtime/policy-revision";
 import { decisionExists, lockHostCalls } from "./host-order";
 
 export async function startSharedBudgets(
@@ -11,11 +11,10 @@ export async function startSharedBudgets(
 ) {
   const input = parseInput(startSharedInput, raw);
   const refused = { claim_id: null, expires_at: null, started_at: null };
-  const live = await liveRevision(context);
-  if (
-    live?.source_digest !== input.policy_digest ||
-    (await agentAccess(context)).paused
-  )
+  const caller = await runtimeCaller(context, input.agent);
+  context = caller.context;
+  const live = await budgetRevision(context, input);
+  if (live?.source_digest !== input.policy_digest || caller.refusal)
     return refused;
 
   const { manager, workspaceId, installationId } = context;
@@ -25,8 +24,15 @@ export async function startSharedBudgets(
   const [lease]: { id: string }[] = await manager.query(
     `SELECT id FROM nodrail.budget_leases
      WHERE workspace_id = $1 AND installation_id = $2 AND call_key = $3
-       AND policy_digest = $4 AND claim_id IS NULL`,
-    [workspaceId, installationId, input.call_fingerprint, input.policy_digest],
+       AND policy_digest = $4 AND claim_id IS NULL
+       AND (agent_id IS NULL OR agent_id = $5)`,
+    [
+      workspaceId,
+      installationId,
+      input.call_fingerprint,
+      input.policy_digest,
+      context.agentId,
+    ],
   );
   if (!lease) return refused;
 

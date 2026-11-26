@@ -28,7 +28,8 @@ export const workspaceSections: ShellSection[] = [
     slug: "agents",
     label: "Agents",
     icon: Bot,
-    purpose: "The agents connected to this environment, and their hosts.",
+    purpose:
+      "Agents registered in this environment and their latest host check-ins.",
   },
   {
     slug: "activity",

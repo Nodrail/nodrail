@@ -78,7 +78,7 @@ export const workTours = {
       {
         anchor: "overview-health",
         title: "How things stand.",
-        body: "Agents reporting, problems such as stalled steps, and this month's plan usage. A badge says when something needs a look.",
+        body: "Installations reporting, problems such as stalled steps, and this month's plan usage. A badge says when something needs a look.",
       },
       {
         anchor: "overview-trend",

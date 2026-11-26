@@ -5,6 +5,8 @@ import type { RuntimeScope } from "@/server/db/context";
 export type Auth =
   | "public"
   | "session"
+  | "cliBrowser"
+  | "cliSession"
   | "workspaceSession"
   | "github"
   | { management: ApiTokenScope; bearerOnly?: boolean }
@@ -20,6 +22,7 @@ export type Operation = {
   result?: z.ZodType;
   headers?: Record<string, z.ZodType>;
   protobuf?: boolean;
+  html?: boolean;
 };
 
 export function operation(

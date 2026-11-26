@@ -20,7 +20,12 @@ import {
   server,
   type Outcome,
 } from "./hook";
-import { connect, createRule, startWorkspace } from "./helpers";
+import {
+  connect,
+  createRule,
+  openStandaloneSetup,
+  startWorkspace,
+} from "./helpers";
 
 const execFileAsync = promisify(execFile);
 
@@ -124,19 +129,97 @@ test.describe("the TypeScript SDK inside real agent frameworks", () => {
 });
 
 test.describe("the connect page", () => {
-  for (const [choice, label, text] of [
-    ["Claude Code", "Plan and apply", "nodrail apply"],
-    ["Codex", "Codex setup", "codex plugin add nodrail@nodrail"],
-    ["TypeScript SDK", "Framework example", "guard(tools)"],
-  ] as const)
-    test(`${choice} shows how to set it up`, async ({ page }) => {
-      const { base } = await startWorkspace(page, `${choice} ${Date.now()}`);
-      await page.goto(`${base}/agents/connect`);
-      await page.getByLabel("Agent ID").fill("coder");
-      await page.getByRole("radio", { name: new RegExp(choice) }).check();
-      await page.getByRole("button", { name: "Connect agent" }).click();
-      await expect(page.getByLabel(label)).toContainText(text);
-    });
+  test("generates project commands for all three hosts and the current environment", async ({
+    page,
+  }) => {
+    const { base, slug } = await startWorkspace(page, `Project ${Date.now()}`);
+    await page.goto(`${base}/agents/connect`);
+    await expect(page.getByLabel("Install the CLI")).toHaveText(
+      "npm i -g @nodrail/cli",
+    );
+    await expect(page.getByText("pnpm add -g @nodrail/cli")).toBeVisible();
+    await page
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    const copied = `nodrail connect ${server} --workspace ${slug} --environment development --runtime claude-code`;
+    await expect(page.getByLabel("Connect command")).toHaveText(copied);
+    await page.getByRole("button", { name: "Copy connect command" }).click();
+    await expect(page.getByText("Copied.")).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      copied,
+    );
+    await expect(page.getByLabel("Agent ID")).toBeHidden();
+    const fresh = `nodrail example support-desk ./desk && cd desk\n${copied}`;
+    await expect(
+      page.getByLabel("Create and connect the example project"),
+    ).toHaveText(fresh);
+    await page.getByRole("button", { name: "Copy example setup" }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      fresh,
+    );
+    await page.getByText("Edit nodrail.yaml by hand", { exact: true }).click();
+    await expect(page.getByText(/runtime list to|in runtimes/)).toHaveCount(0);
+    for (const [choice, runtime] of [
+      ["Claude Code", "claude-code"],
+      ["Codex", "codex"],
+      ["GitHub Copilot CLI", "copilot"],
+    ]) {
+      await page.getByRole("radio", { name: choice, exact: true }).check();
+      await expect(page.getByLabel("Connect command")).toHaveText(
+        `nodrail connect ${server} --workspace ${slug} --environment development --runtime ${runtime}`,
+      );
+      const commands = page.getByLabel("Apply command");
+      await expect(commands).toContainText(
+        `nodrail apply --runtime ${runtime}`,
+      );
+    }
+    await expect(page.getByText(/choose to remember it/)).toBeVisible();
+    await page.goto(
+      `${base.replace(/development$/, "production")}/agents/connect`,
+    );
+    await expect(page.getByLabel("Connect command")).toHaveText(
+      `nodrail connect ${server} --workspace ${slug} --environment production --runtime claude-code`,
+    );
+  });
+
+  test("Codex uses project enrollment instead of a standalone credential", async ({
+    page,
+  }) => {
+    const { base } = await startWorkspace(page, `Codex project ${Date.now()}`);
+    await page.goto(`${base}/agents/connect`);
+    await openStandaloneSetup(page);
+    await expect(page.getByText(/For Codex, choose Codex above/)).toBeVisible();
+    await expect(
+      page.getByRole("radio", { name: "Codex", exact: true }),
+    ).toHaveCount(1);
+    await page.getByRole("radio", { name: "Codex", exact: true }).check();
+    await expect(page.getByLabel("Apply command")).toContainText(
+      "nodrail apply --runtime codex",
+    );
+    await expect(page.getByLabel("Connect command")).toContainText(
+      `nodrail connect ${server}`,
+    );
+    await expect(
+      page.getByText("~/.nodrail/credential", { exact: false }),
+    ).toHaveCount(0);
+  });
+
+  test("still offers the SDK with its installation command", async ({
+    page,
+  }) => {
+    const { base } = await startWorkspace(page, `SDK ${Date.now()}`);
+    await page.goto(`${base}/agents/connect`);
+    await openStandaloneSetup(page);
+    await page.getByLabel("Agent ID").fill("coder");
+    await page.getByRole("radio", { name: /TypeScript SDK/ }).check();
+    await page.getByRole("button", { name: "Create credential" }).click();
+    await expect(page.getByLabel("Install the SDK")).toContainText(
+      "npm install @nodrail/client",
+    );
+    await expect(page.getByLabel("Framework example")).toContainText(
+      "guard(tools)",
+    );
+  });
 });
 
 test.describe("the Codex hook against the real service", () => {

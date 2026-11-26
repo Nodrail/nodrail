@@ -50,7 +50,7 @@ const inRun = {
 export const decisionAttributes = z.object({
   ...source,
   ...inRun,
-  "nodrail.decision": z.enum(["allow", "deny"]),
+  "nodrail.decision": z.enum(["allow", "deny", "would_deny"]),
   "nodrail.tool": label(64).optional(),
   "nodrail.operation": label(128).optional(),
   "nodrail.resource.kind": label(64).optional(),
@@ -170,7 +170,7 @@ export type ReportedDecisionDto = {
   projectBound: boolean;
   host: string;
   agent: string | null;
-  decision: "allow" | "deny";
+  decision: "allow" | "deny" | "would_deny";
   tool: string | null;
   operation: string | null;
   resourceKind: string | null;

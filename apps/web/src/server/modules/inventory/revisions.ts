@@ -10,9 +10,11 @@ import {
   requireCapability,
   type WorkspaceContext,
 } from "@/server/db/context";
+import { authorizeProject } from "@/server/modules/agents/project-access";
 import { recordAudit } from "@/server/modules/audit";
 import { pinContracts } from "@/server/modules/contracts/registry";
 import { pinEvidence } from "@/server/modules/evidence/verifiers";
+import { lockEnvironment } from "@/server/modules/policies/environment-lock";
 import { findEnvironment } from "@/server/modules/workspaces";
 
 /**
@@ -25,6 +27,7 @@ import { findEnvironment } from "@/server/modules/workspaces";
 const revisionRow = z.object({
   project_id: z.string(),
   project: z.string(),
+  entry_agent: z.string().nullable(),
   revision: z.string(),
   policy_revision: z.string().nullable(),
   files: z.array(z.object({ path: z.string(), sha256: z.string() })),
@@ -35,6 +38,7 @@ const revisionRow = z.object({
 const toDto = (row: z.infer<typeof revisionRow>): IntendedRevisionDto => ({
   projectId: row.project_id,
   project: row.project,
+  ...(row.entry_agent ? { entryAgent: row.entry_agent } : {}),
   revision: row.revision,
   policyRevision: row.policy_revision,
   files: row.files,
@@ -43,7 +47,7 @@ const toDto = (row: z.infer<typeof revisionRow>): IntendedRevisionDto => ({
 });
 
 const selectRevisions = `
-  SELECT r.project_id, r.project, r.revision, r.policy_revision, r.files, u.display_name,
+  SELECT r.project_id, r.project, r.entry_agent, r.revision, r.policy_revision, r.files, u.display_name,
          r.published_at
   FROM nodrail.intended_revisions r
   JOIN nodrail.users u ON u.id = r.published_by
@@ -91,34 +95,38 @@ export async function publishIntendedRevision(
 ): Promise<{ revision: IntendedRevisionDto; previous: string | null }> {
   requireCapability(context, "policies:write");
   const input = parseInput(publishRevisionInput, rawInput);
-  const environment = await findEnvironment(context, environmentSlug);
+  const environmentId = await lockEnvironment(context, environmentSlug);
+  await authorizeProject(context, input.project_id, { claim: false });
   const before = await intendedRevisions(
     context,
-    environment.id,
+    environmentId,
     input.project_id,
   );
   await context.manager.query(
     `INSERT INTO nodrail.intended_revisions
        (workspace_id, environment_id, project, revision, policy_revision,
-        files, published_by, project_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        files, published_by, project_id, entry_agent)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT ON CONSTRAINT intended_revisions_project DO UPDATE SET
        revision = excluded.revision, project = excluded.project,
        policy_revision = excluded.policy_revision, files = excluded.files,
+       entry_agent = CASE WHEN intended_revisions.revision = excluded.revision
+         THEN COALESCE(excluded.entry_agent, intended_revisions.entry_agent) ELSE excluded.entry_agent END,
        published_by = excluded.published_by, published_at = clock_timestamp()`,
     [
       context.workspaceId,
-      environment.id,
+      environmentId,
       input.project,
       input.revision,
       input.policy_revision,
       JSON.stringify(input.files),
       context.principal.userId,
       input.project_id,
+      input.entry_agent ?? null,
     ],
   );
   const pinned = {
-    environmentId: environment.id,
+    environmentId,
     projectId: input.project_id,
     workspaceRevision: input.revision,
   };
@@ -128,7 +136,7 @@ export async function publishIntendedRevision(
   await recordAudit(context, {
     eventType: "workspace.revision_published",
     decisionCode: "workspace_revision_published",
-    environmentId: environment.id,
+    environmentId,
     payload: {
       subject: input.project,
       detail: `Revision ${input.revision.slice(0, 12)}${previous ? `, was ${previous.slice(0, 12)}` : ""}`,
@@ -136,7 +144,7 @@ export async function publishIntendedRevision(
   });
   const after = await intendedRevisions(
     context,
-    environment.id,
+    environmentId,
     input.project_id,
   );
   return { revision: after.get(input.project_id)!, previous };

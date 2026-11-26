@@ -24,9 +24,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /** Pausing, last on the page: a step taken rarely and on purpose. */
 function PauseCard({
   workspace,
+  base,
   agent,
 }: {
   workspace: string;
+  base: string;
   agent: ComponentProps<typeof AccessControl>["agent"];
 }) {
   return (
@@ -35,7 +37,7 @@ function PauseCard({
       description="Blocks its covered checks and closes its open requests until someone resumes it."
     >
       <CardActions>
-        <AccessControl workspace={workspace} agent={agent} />
+        <AccessControl workspace={workspace} base={base} agent={agent} />
       </CardActions>
     </Card>
   );
@@ -115,7 +117,7 @@ export default async function AgentSettingsPage({ params }: Props) {
           />
         ) : null}
         {agent.canManage && agent.access.status === "active" ? (
-          <PauseCard workspace={workspace} agent={agent} />
+          <PauseCard workspace={workspace} base={page.base} agent={agent} />
         ) : null}
       </div>
     </>

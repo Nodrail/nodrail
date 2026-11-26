@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Check, LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { track } from "@/components/analytics/posthog";
 import { Card, Disclosure } from "@/components/app/card";
 import { useLiveJson } from "@/components/app/live";
 import { SecretReveal } from "@/components/app/secret-reveal";
@@ -10,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import type { CheckInDto, ConnectedAgentDto } from "@/contracts/v1/agents";
 import { timeAgo } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import type { ConnectPlace } from "../setup-snippets";
 import { SetupInstructions } from "./setup-instructions";
 
 /** How often a just-connected agent's setup asks whether it checked in. */
@@ -60,10 +60,10 @@ function useCheckIn(href: string) {
 /** "Waiting for first check-in…", then "✓ Checked in …: open the agent". */
 function CheckInLine({
   lastSeenAt,
-  agentHref,
+  activityHref,
 }: {
   lastSeenAt: string | null;
-  agentHref: string;
+  activityHref: string;
 }) {
   return (
     <p
@@ -84,8 +84,8 @@ function CheckInLine({
             Checked in{" "}
             <span suppressHydrationWarning>{timeAgo(lastSeenAt)}</span>.
           </span>
-          <Link href={agentHref} className="font-semibold underline">
-            Open the agent
+          <Link href={activityHref} className="font-semibold underline">
+            Open Activity
           </Link>
         </>
       ) : (
@@ -156,21 +156,30 @@ export function ConnectSuccess({
   environmentName,
   agentsPath,
   serverUrl,
-  place,
 }: {
   connected: ConnectedAgentDto;
   environmentName: string;
   agentsPath: string;
   serverUrl: string;
-  place: ConnectPlace;
 }) {
   const { agentKey, installationName, adapterKey, credential } = connected;
   const agentHref = `${agentsPath}/${agentKey}`;
   const checkIn = useCheckIn(`${agentHref}/check-in`);
+  const checkedIn = Boolean(checkIn?.lastSeenAt);
+  const tracked = useRef(false);
+  useEffect(() => {
+    if (!checkedIn || tracked.current) return;
+    tracked.current = true;
+    track("agent_connected", { adapter: adapterKey });
+  }, [adapterKey, checkedIn]);
   return (
     <div className="grid gap-3">
       <Card
-        title={`${agentKey} is connected`}
+        title={
+          checkIn?.lastSeenAt
+            ? `${agentKey} is connected`
+            : "Credential created"
+        }
         description={`Installation ${installationName} in ${environmentName}. Save the credential, then set up its host.`}
       >
         <SecretReveal label="Agent credential" secret={credential.secret}>
@@ -178,17 +187,23 @@ export function ConnectSuccess({
             <Link href={agentHref}>View agent</Link>
           </Button>
         </SecretReveal>
-        <SetupInstructions
-          adapterKey={adapterKey}
-          serverUrl={serverUrl}
-          place={place}
-        />
+        <SetupInstructions adapterKey={adapterKey} serverUrl={serverUrl} />
         <CheckInLine
           lastSeenAt={checkIn?.lastSeenAt ?? null}
-          agentHref={agentHref}
+          activityHref={`${agentsPath.slice(0, -"/agents".length)}/activity?agent=${encodeURIComponent(agentKey)}`}
         />
       </Card>
-      <SetupChecks seen={checkIn?.checks ?? null} />
+      {checkIn?.lastSeenAt ? (
+        <SetupChecks seen={checkIn.checks} />
+      ) : (
+        <p className="text-ui text-muted-foreground">
+          {adapterKey === "custom-sdk"
+            ? "Run one wrapped tool in your app to send a decision."
+            : "Start a fresh host session and ask it to run pwd in the terminal."}{" "}
+          If no check-in arrives, verify the hook is active and uses the
+          credential and server address shown above.
+        </p>
+      )}
       <CoverageLimits />
     </div>
   );

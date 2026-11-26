@@ -6,6 +6,7 @@ import { AuditEvent } from "@/server/db/entities";
 
 export type AuditEntry = {
   eventType: string;
+  occurredAt?: Date;
   decisionCode: DecisionCode;
   actionRequestId?: string;
   agentId?: string;

@@ -6,7 +6,7 @@ import { useActionState } from "react";
 import { FormField } from "@/components/app/form-field";
 import { calloutBox } from "@/components/app/note";
 import { cn } from "@/lib/utils";
-import { authForm, retryMessage } from "./auth-form";
+import { authForm, proxyMessage, retryMessage } from "./auth-form";
 import { StatusMessage } from "@/components/app/status-message";
 import { requestSignInLink, type SignInState } from "../actions";
 import { SubmitButton } from "@/components/app/form-feedback";
@@ -18,6 +18,7 @@ const messages: Record<
   string
 > = {
   retry: retryMessage,
+  proxy: proxyMessage,
   invalid: "Enter a valid email address.",
   unavailable: "We could not send the link. Please try again in a moment.",
 };

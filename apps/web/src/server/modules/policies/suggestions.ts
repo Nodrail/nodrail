@@ -19,14 +19,14 @@ const operationsSql = `
   SELECT tool_key || '.' || operation_key AS name, count(*)::int AS uses
   FROM nodrail.action_requests
   WHERE workspace_id = $1 AND environment_id = $2
-    AND created_at >= ${windowStart}
+    AND access_epoch > 0 AND created_at >= ${windowStart}
   GROUP BY 1 ORDER BY uses DESC, name LIMIT ${MAX_OPERATIONS}`;
 
 const resourcesSql = `
   SELECT resource_kind AS kind, resource_id AS value, count(*)::int AS uses
   FROM nodrail.action_requests
   WHERE workspace_id = $1 AND environment_id = $2
-    AND created_at >= ${windowStart}
+    AND access_epoch > 0 AND created_at >= ${windowStart}
   GROUP BY 1, 2 ORDER BY uses DESC, kind, value LIMIT ${MAX_RESOURCES}`;
 
 /** Step agents and their verdicts, in runs of this environment. */

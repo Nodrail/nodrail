@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Point package metadata and documentation to the unified Nodrail repository.
+
 ### Removed
 
 - `list_pending_approvals`, `get_approval`, `decide_approval` and the

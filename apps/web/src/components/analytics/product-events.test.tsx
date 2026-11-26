@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { SignInForm } from "@/features/auth/components/sign-in-form";
@@ -15,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   createWorkspaceAction: vi.fn(),
   connectAgentAction: vi.fn(),
   inviteAction: vi.fn(),
+  liveJson: vi.fn(),
 }));
 
 vi.mock("@/components/analytics/posthog", () => ({ track: mocks.track }));
@@ -39,6 +46,8 @@ vi.mock("@/features/agents/actions", () => ({
 vi.mock("@/features/team/actions", () => ({
   inviteAction: mocks.inviteAction,
 }));
+
+vi.mock("@/components/app/live", () => ({ useLiveJson: mocks.liveJson }));
 
 const click = (name: string) =>
   userEvent.click(screen.getByRole("button", { name }));
@@ -106,7 +115,7 @@ describe("workspace created", () => {
   });
 });
 
-test("agent connected sends the runtime type, not the agent", async () => {
+test("agent connected fires on check-in with only the runtime type", async () => {
   mocks.connectAgentAction.mockResolvedValue({
     status: "ok",
     data: {
@@ -128,7 +137,18 @@ test("agent connected sends the runtime type, not the agent", async () => {
       />
     </ToastProvider>,
   );
-  await click("Connect agent");
+  await click("Create credential");
+  expect(
+    await screen.findByRole("heading", { name: "Credential created" }),
+  ).toBeVisible();
+  expect(mocks.track).not.toHaveBeenCalled();
+  const onCheckIn = mocks.liveJson.mock.lastCall?.[1] as (body: object) => void;
+  act(() =>
+    onCheckIn({
+      lastSeenAt: "2026-11-25T10:00:00Z",
+      checks: { allowed: true, blocked: false, denied: false },
+    }),
+  );
   await waitFor(() => expect(mocks.track).toHaveBeenCalledOnce());
   expect(mocks.track.mock.calls).toEqual([
     ["agent_connected", { adapter: "custom-sdk" }],

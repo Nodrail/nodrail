@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { runHook, server, shell } from "./hook";
 import {
@@ -7,9 +8,11 @@ import {
   connect,
   expectAccessible,
   expectCopied,
+  openStandaloneSetup,
   seedDecision,
   setLastSeen,
   startWorkspace,
+  withDatabase,
 } from "./helpers";
 
 const secretPattern = /^ndr_[0-9a-f]{12}_[\w-]{43}$/;
@@ -33,23 +36,24 @@ test.describe("connecting an agent", () => {
     const { base } = await startWorkspace(page, `Connect ${Date.now()}`);
     await page.goto(`${base}/agents`);
     await expect(
-      page.getByRole("heading", { name: "No agents connected yet" }),
+      page.getByRole("heading", { name: "No agents registered yet" }),
     ).toBeVisible();
     await expectAccessible(page);
 
-    await page.getByRole("link", { name: "Connect an agent" }).click();
+    await page.getByRole("link", { name: "Connect a project" }).click();
     await page.waitForURL(/\/connect$/);
     await expectAccessible(page);
+    await openStandaloneSetup(page);
     await page.getByLabel("TypeScript SDK").check();
     await page.getByLabel("Agent ID").fill("support-agent");
     await page.getByLabel(/Description/).fill("Customer support");
-    await page.getByRole("button", { name: "Connect agent" }).click();
+    await page.getByRole("button", { name: "Create credential" }).click();
 
     const secret = page.getByLabel("Agent credential");
     await expect(secret).toHaveText(secretPattern);
     await expectAccessible(page);
 
-    await page.getByRole("link", { name: "View agent" }).click();
+    await page.getByRole("link", { name: "View agent", exact: true }).click();
     await page.waitForURL(/\/agents\/support-agent$/);
     await expect(
       page.getByRole("heading", { name: "support-agent", level: 1 }),
@@ -80,29 +84,32 @@ test.describe("connecting an agent", () => {
     await expect(row).toContainText("Waiting for first check-in");
     await expect(row).toContainText("No check-in yet");
     await expect(row).not.toContainText("Active");
-    await expect(page.getByText("1 connected")).toBeVisible();
+    await expect(page.getByText("1 connected installation")).toBeVisible();
   });
 
   test("three steps, then the first check-in shows live", async ({ page }) => {
     const { base } = await startWorkspace(page, `Live ${Date.now()}`);
     await page.goto(`${base}/agents/connect`);
+    await openStandaloneSetup(page);
     const steps = page.locator("[data-slot=connect-step]");
     await expect(steps).toHaveCount(3);
     await expect(steps.nth(0)).toContainText("1. Choose its host");
-    await expect(steps.nth(2)).toContainText("3. Connect and set up");
+    await expect(steps.nth(2)).toContainText(
+      "3. Create a standalone credential",
+    );
     const checksHeading = page.getByRole("heading", { name: "Checks to run" });
     await expect(checksHeading).toHaveCount(0);
     await page.getByLabel("Agent ID").fill("live");
-    await page.getByRole("button", { name: "Connect agent" }).click();
+    await page.getByRole("button", { name: "Create credential" }).click();
     const secret =
       (await page.getByLabel("Agent credential").textContent()) ?? "";
 
     const status = page.locator("[data-slot=check-in]");
     await expect(status).toHaveText("Waiting for first check-in…");
-    await expect(checksHeading).toBeVisible();
     await expect(
-      page.locator("[data-slot=setup-check][data-done]"),
-    ).toHaveCount(0);
+      page.getByRole("heading", { name: "Credential created" }),
+    ).toBeVisible();
+    await expect(checksHeading).toHaveCount(0);
     await expectAccessible(page);
 
     // The hook asks about an action no rule covers: its first check-in.
@@ -114,9 +121,14 @@ test.describe("connecting an agent", () => {
     await expect(
       page.locator("[data-slot=setup-check][data-done]"),
     ).toContainText("An action no rule covers");
-    await status.getByRole("link", { name: "Open the agent" }).click();
-    await page.waitForURL(/\/agents\/live$/);
-    await expect(badge(page, "Reporting")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "live is connected" }),
+    ).toBeVisible();
+    await status.getByRole("link", { name: "Open Activity" }).click();
+    await page.waitForURL(/activity\?agent=live$/);
+    await expect(
+      page.getByText("Denied · no rule covers it").first(),
+    ).toBeVisible();
   });
 
   test("the secret never appears again", async ({ page }) => {
@@ -142,15 +154,16 @@ test.describe("connecting an agent", () => {
     const { base } = await startWorkspace(page, `Errors ${Date.now()}`);
     await connect(page, base, "taken");
     await page.goto(`${base}/agents/connect`);
+    await openStandaloneSetup(page);
     const field = page.getByLabel("Agent ID");
     await field.fill("taken");
-    await page.getByRole("button", { name: "Connect agent" }).click();
-    await expect(field).toHaveAccessibleDescription(/already connected/);
+    await page.getByRole("button", { name: "Create credential" }).click();
+    await expect(page.getByText(/already has an installation/)).toBeVisible();
     await expect(field).toHaveValue("taken");
 
     await field.fill("Not Valid");
-    await page.getByRole("button", { name: "Connect agent" }).click();
-    await expect(field).toHaveAccessibleDescription(/lowercase/);
+    await page.getByRole("button", { name: "Create credential" }).click();
+    await expect(page.getByText(/up to 58 lowercase/)).toBeVisible();
     await expectAccessible(page);
   });
 
@@ -163,16 +176,17 @@ test.describe("connecting an agent", () => {
     await expect(
       page.getByRole("heading", { name: "Not connected in Production" }),
     ).toBeVisible();
-    await page.getByRole("link", { name: "Connect in Production" }).click();
+    await page.getByRole("link", { name: "Open setup in Production" }).click();
     await expect(page.getByLabel("Agent ID")).toHaveValue("traveller");
-    await page.getByRole("button", { name: "Connect agent" }).click();
+    await page.getByRole("button", { name: "Create credential" }).click();
     await expect(page.getByLabel("Agent credential")).toBeVisible();
 
     await openAgent(page, production, "traveller", "settings");
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog).toContainText("traveller-dev · Development");
-    await expect(dialog).toContainText("traveller-prod · Production");
+    await expect(dialog).toContainText(
+      "Stops this agent on machines that report it. To contain a machine you don't trust, pause or revoke the machine.",
+    );
   });
 
   test("an agent stays in its own environment's list", async ({ page }) => {
@@ -180,9 +194,86 @@ test.describe("connecting an agent", () => {
     await connect(page, base, "dev-only");
     await page.goto(`/app/${slug}/production/agents`);
     await expect(
-      page.getByRole("heading", { name: "No agents connected yet" }),
+      page.getByRole("heading", { name: "No agents registered yet" }),
     ).toBeVisible();
   });
+});
+
+test("project agents and machine access have separate controls", async ({
+  page,
+}) => {
+  const { base, slug } = await startWorkspace(
+    page,
+    `Project agents ${Date.now()}`,
+  );
+  await connect(page, base, "desk-machine");
+  const project = randomUUID();
+  await withDatabase(async (db) => {
+    await db.query(
+      `UPDATE nodrail.installations i SET enrollment_project_id = $2, enrollment_agent_keys = ARRAY['support', 'marketing']
+       FROM nodrail.workspaces w WHERE w.slug = $1 AND i.workspace_id = w.id`,
+      [slug, project],
+    );
+    await db.query(
+      `INSERT INTO nodrail.agents (workspace_id, external_key, managed_project_id)
+       SELECT w.id, caller, $2 FROM nodrail.workspaces w CROSS JOIN unnest(ARRAY['support', 'marketing']) caller
+       WHERE w.slug = $1`,
+      [slug, project],
+    );
+  });
+
+  await page.goto(`${base}/agents`);
+  const agents = page.getByRole("list", { name: "Agents", exact: true });
+  const row = (name: string) =>
+    agents.locator("[data-slot=agent-row]").filter({
+      has: page.getByText(name, { exact: true }),
+    });
+  const support = row("support");
+  const marketing = row("marketing");
+  for (const agent of [support, marketing]) {
+    await expect(agent).toContainText(`from ${project}`);
+    await expect(agent.getByRole("list", { name: "Machines" })).toContainText(
+      "desk-machine-dev",
+    );
+  }
+  await expect(
+    page.getByRole("list", { name: "Unidentified callers" }),
+  ).toContainText("Unidentified callers on desk-machine-dev");
+
+  const pause = async (
+    button: string,
+    scope: "agent" | "machine",
+    copy: string,
+  ) => {
+    await support
+      .getByRole("button", { name: `Actions for ${button}`, exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: /^Pause/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toContainText(copy);
+    if (scope === "agent")
+      await expect(
+        dialog.getByRole("link", { name: "Manage machines" }),
+      ).toHaveAttribute("href", `${base}/agents#machines`);
+    await dialog.getByRole("button", { name: `Pause ${scope}` }).click();
+    await expect(dialog).toBeHidden();
+  };
+  await pause(
+    "support",
+    "agent",
+    "Stops this agent on machines that report it. To contain a machine you don't trust, pause or revoke the machine.",
+  );
+  await expect(support).toContainText("Paused");
+  await expect(marketing).not.toContainText("Paused");
+
+  await pause(
+    "desk-machine-dev",
+    "machine",
+    "from every caller on this machine",
+  );
+  await expect(marketing.getByRole("list", { name: "Machines" })).toContainText(
+    "Paused",
+  );
 });
 
 test.describe("an agent's tabs", () => {
@@ -249,8 +340,12 @@ test.describe("pausing and resuming", () => {
     await trigger.click();
     const dialog = page.getByRole("dialog", { name: "Pause careful?" });
     await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
-    await expect(dialog).toContainText("careful-dev · Development");
-    await expect(dialog).toContainText("does not stop direct calls");
+    await expect(dialog).toContainText(
+      "Stops this agent on machines that report it.",
+    );
+    await expect(dialog).toContainText(
+      "calls outside the integration are unaffected",
+    );
     await expectAccessible(page);
 
     await page.keyboard.press("Escape");
@@ -350,9 +445,11 @@ test.describe("what each role can do", () => {
       viewer.page.getByRole("link", { name: /^.?\s*assigned/ }),
     ).toBeVisible();
     await expect(viewer.page.getByText("secret-project")).toHaveCount(0);
-    await expect(viewer.page.getByText("1 connected")).toBeVisible();
     await expect(
-      viewer.page.getByRole("link", { name: "Connect an agent" }),
+      viewer.page.getByText("1 connected installation"),
+    ).toBeVisible();
+    await expect(
+      viewer.page.getByRole("link", { name: "Connect a project" }),
     ).toHaveCount(0);
 
     await openAgent(viewer.page, base, "assigned", "settings");

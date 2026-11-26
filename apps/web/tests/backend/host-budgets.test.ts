@@ -1,3 +1,4 @@
+import { withRuntime } from "@/server/db/context";
 import { createHash, randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { expect, test } from "vitest";
@@ -5,6 +6,8 @@ import { POST as reportRoute } from "@/app/api/v1/runtime/actions/[id]/reports/r
 import { POST as reserveRoute } from "@/app/api/v1/runtime/budgets/reserve/route";
 import { POST as startRoute } from "@/app/api/v1/runtime/budgets/start/route";
 import { POST as settleRoute } from "@/app/api/v1/runtime/budgets/settle/route";
+import { admissionId } from "@/server/modules/runtime/admission";
+import { runtimeCaller } from "@/server/modules/runtime/caller";
 import { POST as decisionsRoute } from "@/app/api/v1/runtime/decisions/route";
 import { POST as heartbeatRoute } from "@/app/api/v1/runtime/heartbeat/route";
 import { GET as identityRoute } from "@/app/api/v1/runtime/identity/route";
@@ -78,28 +81,45 @@ async function setup() {
   return { w, token, other, agent };
 }
 
-async function decision(
+async function decisionReport(
   token: string,
   id: string,
   digest = digestOf(POLICY),
   verdict = "allow",
-  decidedAt = new Date().toISOString(),
 ) {
-  const answer = await postJson(decisionsRoute, "runtime/decisions", token, {
+  const admission_id = await withRuntime(
+    token,
+    "decisions:write",
+    async (context) => admissionId(await runtimeCaller(context), id, digest),
+  );
+  const body = {
     decisions: [
       {
         ...call,
         idempotency_key: id,
+        admission_id,
         policy_digest: digest,
         verdict,
         resource: { kind: "mcp_tool", id: "outbox.publish" },
         params: {},
-        decided_at: decidedAt,
+        decided_at: new Date().toISOString(),
       },
     ],
-  });
-  expect(answer.json.results[0]).toHaveProperty("action_id");
-  return answer.json.results[0].action_id as string;
+  };
+  return async () => {
+    const answer = await postJson(
+      decisionsRoute,
+      "runtime/decisions",
+      token,
+      body,
+    );
+    expect(answer.json.results[0]).toHaveProperty("action_id");
+    return answer.json.results[0].action_id as string;
+  };
+}
+
+async function decision(...args: Parameters<typeof decisionReport>) {
+  return (await decisionReport(...args))();
 }
 
 async function outcome(token: string, id: string, outcome: string) {
@@ -288,9 +308,11 @@ inEachMode(() => {
     expect((await start(token, held)).json.claim_id).toEqual(
       expect.any(String),
     );
-    const when = new Date().toISOString();
-    const record = () =>
-      decision(token, held.call_fingerprint, held.policy_digest, "allow", when);
+    const record = await decisionReport(
+      token,
+      held.call_fingerprint,
+      held.policy_digest,
+    );
     const id = await record();
     await admin.query(
       "UPDATE nodrail.budget_reservations SET action_request_id = NULL WHERE workspace_id = $1",

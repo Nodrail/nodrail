@@ -69,6 +69,7 @@ export class InventoryReport extends ReportedByPerson {
   @Column({ type: "jsonb", nullable: true })
   names!: { drift: string[]; unmanaged: string[] } | null;
   @Time() observedAt!: Date;
+  @Column({ type: "timestamptz", nullable: true }) lastSeenAt!: Date | null;
 }
 
 /**
@@ -98,6 +99,7 @@ export class IntendedRevision extends PublishedToEnvironment {
   @Uuid() projectId!: string;
   /** Its name when published, for display. */
   @Text() project!: string;
+  @OptionalText() entryAgent!: string | null;
   @Text() revision!: string;
   @OptionalText() policyRevision!: string | null;
   /** The lock's files: `[{ path, sha256 }]`. */

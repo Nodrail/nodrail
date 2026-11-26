@@ -8,9 +8,10 @@ import {
   type SharedBudgetRequest,
 } from "@/contracts/v1/runtime-budgets";
 import { AppError, parseInput, type RuntimeContext } from "@/server/db/context";
+import { logicalIdFor } from "@/server/modules/policies/logical-id";
 import { liveRunPolicy } from "@/server/modules/runs/history";
-import { liveRevision } from "@/server/modules/runtime/policy-revision";
-import { agentAccess } from "@/server/modules/runtime/records";
+import { runtimeCaller } from "@/server/modules/runtime/caller";
+import { budgetRevision } from "@/server/modules/runtime/policy-revision";
 import { touch } from "@/server/modules/runtime/touch";
 import { decisionExists, lockHostCalls } from "./host-order";
 import { admitCoverings, windowFor, writeReservations } from "./reserve";
@@ -32,11 +33,11 @@ function requestCoverings(
   input: SharedBudgetRequest,
   limits: readonly NumericBudget[] | undefined,
   now: Date,
+  agent: string,
 ) {
   const place = input.run
     ? { key: input.run.key, step: input.run.step ?? null, runId: null }
     : null;
-  const agent = place?.step?.agent ?? "main";
   return (limits ?? []).flatMap((budget) => {
     if (
       budget.across !== "environment" ||
@@ -61,10 +62,10 @@ async function claim(context: RuntimeContext, input: SharedBudgetRequest) {
   const key = [workspaceId, installationId, input.call_fingerprint];
   const digest = fingerprint(input);
   const [created]: { id: string }[] = await manager.query(
-    `INSERT INTO nodrail.budget_leases (workspace_id, installation_id, call_key, body_digest, policy_digest)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO nodrail.budget_leases (workspace_id, installation_id, call_key, body_digest, policy_digest, agent_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (workspace_id, installation_id, call_key) DO NOTHING RETURNING id`,
-    [...key, digest, input.policy_digest],
+    [...key, digest, input.policy_digest, context.agentId],
   );
   if (created) return { id: created.id };
 
@@ -97,20 +98,39 @@ async function claim(context: RuntimeContext, input: SharedBudgetRequest) {
   };
 }
 
+/** Use database IDs for windows and the pinned source's IDs on the wire. */
+function budgetIds(environmentId: string, input: SharedBudgetRequest) {
+  const storedId = (id: string) => logicalIdFor(environmentId, id);
+  const wire = new Map(input.budget_ids?.map((id) => [storedId(id), id]));
+  const amounts = Object.fromEntries(
+    Object.entries(input.amounts ?? {}).map(([id, amount]) => [
+      storedId(id),
+      amount,
+    ]),
+  );
+  return { wire, amounts };
+}
+
 export async function reserveSharedBudgets(
   context: RuntimeContext,
   rawInput: unknown,
 ): Promise<SharedBudgetReply> {
   const input = parseInput(reserveSharedInput, rawInput);
-  const live = await liveRevision(context);
-  if (!live || live.source_digest !== input.policy_digest)
+  const caller = await runtimeCaller(context, input.agent);
+  context = caller.context;
+  const live = await budgetRevision(context, input);
+  if (!live)
     return {
       limits: [],
       expires_at: null,
       reason: "The host policy differs from the published policy.",
     };
-  if ((await agentAccess(context)).paused)
-    return { limits: [], expires_at: null, reason: "The agent is paused." };
+  if (caller.refusal)
+    return {
+      limits: [],
+      expires_at: null,
+      reason: caller.refusal,
+    };
   // A contended window can be retried as a fresh call. The hook has its own
   // short deadline and never waits for a reservation to become available.
   await context.manager.query("SET LOCAL lock_timeout = '250ms'");
@@ -128,9 +148,20 @@ export async function reserveSharedBudgets(
   }
   const policy = liveRunPolicy(live.run_policy);
   const now = await databaseTime(context);
-  const coverings = requestCoverings(input, policy?.limits, now);
+  const { wire, amounts } = budgetIds(context.environmentId, input);
+  const coverings = requestCoverings(
+    { ...input, amounts },
+    policy?.limits,
+    now,
+    caller.enrolled || input.agent
+      ? caller.agent
+      : (input.run?.step?.agent ?? "main"),
+  );
   const admission = await admitCoverings(context, coverings, now, true);
-  const limits = admission.standings;
+  const limits = admission.standings.map((limit) => ({
+    ...limit,
+    id: wire.get(limit.id) ?? limit.id,
+  }));
   let expires_at: string | null = null;
   if (limits.length && limits.every(({ state }) => state === "ok")) {
     const at = await databaseTime(context);

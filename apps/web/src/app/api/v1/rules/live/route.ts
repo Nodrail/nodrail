@@ -1,4 +1,4 @@
-import { environmentQuery } from "@/contracts/v1/public-api";
+import { liveRulesQuery } from "@/contracts/v1/public-api";
 import { readLiveVersion } from "@/server/modules/policies/managed";
 import { publicRoute } from "@/server/public-api/route";
 
@@ -9,6 +9,7 @@ import { publicRoute } from "@/server/public-api/route";
  * the YAML endpoint can't render.
  */
 export const GET = publicRoute(
-  { scope: "read", access: "read", query: environmentQuery },
-  (context, call) => readLiveVersion(context, call.environment),
+  { scope: "read", access: "read", query: liveRulesQuery },
+  (context, call) =>
+    readLiveVersion(context, call.environment, call.query.workspace_revision),
 );

@@ -37,7 +37,6 @@ A rules file is a YAML list of `rule`, `list` and `macro` entries, plus `gate` a
 
 A rule only allows or denies. Every matching rule counts, in any order, and deny beats allow. If no rule matches, the outcome is `none`, and whatever calls the engine must treat that as blocked. Nothing waits for a person: a denied call comes back to the agent with its reason, so it can change course or, for a [gate or budget](runs.md), meet what is missing and try again. Irreversible actions, such as deploying to production, merging to main or deleting data, are for people to do themselves; write rules that deny them to agents.
 
-`effect: require_approval` was removed. A file that still uses it fails to compile and says what to write instead: `deny`, with a gate, budget or evidence requirement to say when the call is allowed.
 
 ## Rule fields
 
@@ -82,7 +81,7 @@ A prefix is literal text, so `acme/support` also matches `acme/support-extra`. E
 
 Operators: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in` and `contains`. `contains` tests whether an array has a value. `field` can reach into objects with dots.
 
-Where a field lives depends on how the call was described. With `nodrail.run()` or `check()` it is the `params` you pass. A tool wrapped by `guard()` in [`@nodrail/client`](https://github.com/Nodrail/nodrail-js/tree/main/packages/client), or an MCP tool, carries its arguments under `input`, so the condition above reads `{ field: input.amount, op: lte, value: 1000 }`. File calls carry `path` and `path_parts`; see [Commands and tools](commands-and-tools.md).
+Where a field lives depends on how the call was described. With `nodrail.run()` or `check()` it is the `params` you pass. A tool wrapped by `guard()` in [`@nodrail/client`](https://github.com/Nodrail/nodrail/tree/main/packages/client), or an MCP tool, carries its arguments under `input`, so the condition above reads `{ field: input.amount, op: lte, value: 1000 }`. File calls carry `path` and `path_parts`; see [Commands and tools](commands-and-tools.md).
 
 An entry can also be `{ macro: name }`, or `{ field: currency, op: in, list: name }`.
 

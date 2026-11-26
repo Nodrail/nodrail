@@ -17,8 +17,18 @@ import {
   usable,
   type Capture,
 } from "@/server/modules/contracts/runtime-receipts";
+import { callerStep, runtimeCaller } from "@/server/modules/runtime/caller";
+import {
+  pinnedRevision,
+  requirePolicyOwnership,
+} from "@/server/modules/runtime/policy-revision";
 import { touch } from "@/server/modules/runtime/touch";
-import { liveRunPolicyIn, type Place, type ReceiptRecord } from "./history";
+import {
+  liveRunPolicy,
+  liveRunPolicyIn,
+  type Place,
+  type ReceiptRecord,
+} from "./history";
 
 /** The next place in a run. Drawn after the run is locked, when it is. */
 export const nextSeq = "nextval('nodrail.run_events')";
@@ -244,13 +254,28 @@ async function writeFinish(
  * relies on it. A declared receipt's reading is answered, so a hook can
  * refuse a hand-back with its reason.
  */
+async function runPolicyForStep(
+  { context, refusal }: Awaited<ReturnType<typeof runtimeCaller>>,
+  digest?: string,
+) {
+  if (refusal) throw new AppError("FORBIDDEN", refusal);
+  await requirePolicyOwnership(context);
+  const pinned = digest ? await pinnedRevision(context, digest) : undefined;
+  if (context.enrollmentProjectId && !pinned) throw new AppError("NOT_FOUND");
+  if (!digest) return liveRunPolicyIn(context, context.environmentId);
+  return liveRunPolicy(pinned?.run_policy);
+}
+
 export async function recordStep(
   context: RuntimeContext,
   rawInput: unknown,
 ): Promise<StepAnswer> {
   const input = parseInput(stepInput, rawInput);
+  const caller = await runtimeCaller(context, input.agent);
+  context = caller.context;
+  input.step = callerStep(caller, input.step);
   await touch(context);
-  const policy = await liveRunPolicyIn(context, context.environmentId);
+  const policy = await runPolicyForStep(caller, input.policy_digest);
   const place = await enterRun(context, input.run, policy !== null);
   const current = await ensureStep(context, place.runId, input.step, true);
   const where = [context.workspaceId, place.runId, input.step.id];

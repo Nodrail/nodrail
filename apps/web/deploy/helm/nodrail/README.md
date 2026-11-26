@@ -14,15 +14,20 @@ Set `DATABASE_URL` to use `APP_DATABASE_USER` (default `nodrail_app_login`) and 
 
 Use HTTPS for a public `appOrigin`, including when TLS terminates upstream. Configure your trusted ingress or reverse proxy to overwrite a header with one client IP. Set `AUTH_CLIENT_IP_HEADER` through `extraEnv` to that header's name and restrict direct access to the app.
 
+Build both images from the same source revision, push them to a registry your cluster can reach, and set `NODRAIL_IMAGE_REPOSITORY` and `NODRAIL_IMAGE_TAG` to the registry prefix and common tag you pushed.
+
 ```sh
 helm upgrade --install control . --namespace nodrail \
   --set appOrigin=https://control.example.org \
-  --set-string image.digest="$NODRAIL_SERVER_DIGEST" \
-  --set-string migration.digest="$NODRAIL_MIGRATE_DIGEST" \
+  --set-string image.repository="$NODRAIL_IMAGE_REPOSITORY/server" \
+  --set-string migration.repository="$NODRAIL_IMAGE_REPOSITORY/server-migrate" \
+  --set-string image.tag="$NODRAIL_IMAGE_TAG" \
+  --set-string 'extraEnv[0].name=AUTH_CLIENT_IP_HEADER' \
+  --set-string 'extraEnv[0].value=X-Real-IP' \
   --wait --timeout 10m
 ```
 
-Use the verified index digest for each image. The workloads run as UID and GID 1000 and use the Linux Restricted Pod Security settings.
+Have the proxy overwrite `X-Real-IP`, or set the chart value to the header your proxy overwrites. The workloads run as UID and GID 1000 and use the Linux Restricted Pod Security settings.
 
 | Values                                                                                       | Purpose                                                                                                        |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -38,6 +43,6 @@ Use the verified index digest for each image. The workloads run as UID and GID 1
 | `ingress.enabled`, `ingress.host`, `ingress.className`, `ingress.annotations`, `ingress.tls` | Ingress requires an HTTPS `appOrigin` with the same public hostname.         |
 | `scheduler.enabled`, `scheduler.schedule`                                                    | Delivery, retries and retention schedule. If disabled, supply an external scheduler.                           |
 
-Migrations run before installation and upgrade. Back up the database first. After a failed hook, inspect the migration Job logs before retrying. Run `pnpm admin:create --email you@example.com --generate` as a one-shot Job using the migration image and migration Secret. Override the image entrypoint with `pnpm` for that Job. SMTP is optional and enables sign-in links, verified signup and password reset. Set `NOTIFICATIONS_FROM` and use `smtps://` for implicit TLS or `smtp://` for STARTTLS.
+Migrations run before installation and upgrade. Back up the database first. After a failed hook, inspect the migration Job logs before retrying. Use the [first-account Job and protected-call walkthrough](https://nodrail.com/docs/self-hosting#install-on-kubernetes) with the same images and migration Secret. SMTP is optional and enables sign-in links, verified signup and password reset. Set `NOTIFICATIONS_FROM` and use `smtps://` for implicit TLS or `smtp://` for STARTTLS.
 
 Run chart regressions from `apps/web` with `node --test tests/helm.test.mjs` and Helm installed.

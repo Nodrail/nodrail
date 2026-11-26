@@ -6,15 +6,21 @@ import {
   settleSharedInput,
   startSharedInput,
 } from "@/contracts/v1/runtime-budgets";
-import { hostDecisionsInput } from "@/contracts/v1/runtime-decisions";
+import {
+  hostDecisionsInput,
+  hostDecisionsResult,
+} from "@/contracts/v1/runtime-decisions";
 import {
   heartbeatInput,
   idempotencyKey,
   permitInput,
+  policyDigest,
   reportInput,
+  runtimeAgent,
   stepInput,
   submitActionInput,
 } from "@/contracts/v1/runtime";
+import { hostObservationInput } from "@/contracts/v1/runtime-inventory";
 import type { RuntimeScope } from "@/server/db/context";
 import { operation, type Operation } from "./operation";
 
@@ -89,7 +95,11 @@ export const runtimeOperations = [
     "post",
     "/decisions",
     "Record a batch of decisions made on the host",
-    { scope: "decisions:write", body: hostDecisionsInput },
+    {
+      scope: "decisions:write",
+      body: hostDecisionsInput,
+      result: hostDecisionsResult,
+    },
   ),
   runtime(
     "get",
@@ -104,6 +114,50 @@ export const runtimeOperations = [
     scope: "heartbeat:write",
     body: heartbeatInput,
   }),
+  runtime(
+    "get",
+    "/access",
+    "Check fresh access for a host-asserted caller. A machine pause blocks every caller.",
+    {
+      scope: "policy:read",
+      query: z.object({
+        agent: runtimeAgent,
+        call: idempotencyKey
+          .optional()
+          .describe("The key that will be used to report this decision"),
+        policy_digest: policyDigest
+          .optional()
+          .describe("Required for enrolled hosts"),
+        workspace_revision: policyDigest
+          .optional()
+          .describe("Required for enrolled hosts"),
+      }),
+      result: z.object({
+        paused: z.boolean(),
+        agent: z.string(),
+        admission_id: z.string().optional(),
+        project_id: z.uuid().nullable(),
+        workspace: z.string(),
+        environment: z.string(),
+        paused_agents: z.array(z.string()).optional(),
+        reason: z.string().optional(),
+      }),
+    },
+  ),
+  runtime("post", "/inventory", "Record an enrolled host observation", {
+    scope: "heartbeat:write",
+    body: hostObservationInput,
+  }),
+  runtime(
+    "post",
+    "/disconnect",
+    "Revoke the calling machine enrollment credential",
+    {
+      scope: "policy:read",
+      body: z.object({}),
+      result: z.object({ revoked: z.boolean() }),
+    },
+  ),
   runtime("get", "/identity", "Read the calling installation's identity", {
     scope: "actions:read-own",
   }),

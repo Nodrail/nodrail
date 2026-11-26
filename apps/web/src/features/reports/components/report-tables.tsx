@@ -28,7 +28,13 @@ export function GateTable({
           ? null
           : "No gates in the policies live now. Add one on the Gates tab of Policies."
       }
-      headings={["Gate", "Checked", "Stopped", "First pass", "Usually missing"]}
+      headings={[
+        "Gate",
+        "Checked",
+        "Stopped",
+        "No denial on first covered call",
+        "Usually missing",
+      ]}
     >
       {gates.map((gate) => (
         <tr key={gate.id}>
@@ -72,9 +78,15 @@ export function BudgetTable({
     <InsightTable
       label="Budgets"
       empty={
-        budgets.length
-          ? null
-          : "No budgets in the rules live now. Add one to a rules file to limit tool calls, tokens or cost."
+        budgets.length ? null : (
+          <>
+            Set a limit for tool calls, tokens or cost in{" "}
+            <Link className="underline" href={`${base}/policies/budgets`}>
+              Policies → Budgets
+            </Link>
+            .
+          </>
+        )
       }
       headings={["Budget", "Overruns", "Runs"]}
     >

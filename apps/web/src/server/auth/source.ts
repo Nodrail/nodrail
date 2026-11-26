@@ -10,14 +10,19 @@ export function clientSource(request: Pick<Headers, "get">) {
     process.env.VERCEL === "1"
       ? "x-vercel-forwarded-for"
       : process.env.AUTH_CLIENT_IP_HEADER;
-  if (!header) {
-    const origin = process.env.APP_ORIGIN;
-    return origin && isLoopbackHost(new URL(origin).hostname) ? "local" : null;
+  if (header === undefined || header === "") {
+    const origin = URL.parse(process.env.APP_ORIGIN ?? "");
+    return origin && isLoopbackHost(origin.hostname) ? "local" : null;
   }
-  const value = request.get(header)?.trim() ?? "";
+  const name = header.trim();
+  if (!/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(name)) return null;
+  const value = request.get(name)?.trim() ?? "";
   if (isIP(value) === 4) return value;
   if (value.includes("%") || isIP(value) !== 6) return null;
+  return ipv6Source(value);
+}
 
+function ipv6Source(value: string) {
   const canonical = new URL(`http://[${value}]`).hostname.slice(1, -1);
   // IPv4-mapped IPv6 must use the same bucket as plain IPv4.
   if (canonical.startsWith("::ffff:")) {

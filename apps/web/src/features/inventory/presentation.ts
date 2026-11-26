@@ -13,6 +13,8 @@ export const hostNames: Record<string, string> = {
  * one, and a stale report says nothing about now.
  */
 export function rowStatus(row: InventoryRowDto): { tone: Tone; label: string } {
+  if (row.activation === "disconnected")
+    return { tone: "neutral", label: "Disconnected" };
   if (row.stale) return { tone: "neutral", label: "Stale: no recent report" };
   if (row.activation === "inactive")
     return { tone: "danger", label: "Hook not running" };

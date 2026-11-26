@@ -1,192 +1,49 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
-  REPORTING_WINDOW_MINUTES,
   connectAgentInput,
   type AccessChangeDto,
-  type AgentAccessDto,
   type AgentDetailDto,
   type AgentOptionDto,
-  type AgentListDto,
   type ConnectedAgentDto,
   type CredentialDto,
-  type InstallationDto,
   type IssuedCredentialDto,
   type ObservedOutcome,
-  type Reporting,
 } from "@/contracts/v1/agents";
-import type { AgentCountsDto } from "@/contracts/v1/activity";
 import {
   AppError,
-  decodeCursor,
-  encodeCursor,
   parseInput,
   parseRows,
   requireCapability,
   type WorkspaceContext,
 } from "@/server/db/context";
-import {
-  Agent,
-  AgentMember,
-  Installation,
-  InstallationCredential,
-} from "@/server/db/entities";
+import { RUNTIME_SCOPES } from "@/server/db/runtime-scopes";
+import { Agent, AgentMember, Installation } from "@/server/db/entities";
 import { recordAudit } from "@/server/modules/audit";
 import { findEnvironment } from "@/server/modules/workspaces";
-import { digestSecret, newSecret } from "@/server/security/secrets";
-import { RUNTIME_SCOPES } from "@/server/db/runtime-scopes";
+import {
+  closeCredential,
+  issueCredential,
+  supportedHostScopes,
+} from "./credentials";
 
-const PAGE_SIZE = 50;
+import {
+  accessColumns,
+  admittedAgent,
+  installationOwner,
+  installationRow,
+  installationSelect,
+  toAccess,
+  toInstallation,
+} from "./installation-view";
 
-function reportingFor(lastSeenAt: Date | null, now = Date.now()): Reporting {
-  if (!lastSeenAt) return "never_reported";
-  return now - lastSeenAt.getTime() <= REPORTING_WINDOW_MINUTES * 60_000
-    ? "reporting"
-    : "stale";
-}
-
-const accessColumns = {
-  access_status: z.enum(["active", "paused"]),
-  paused_at: z.date().nullable(),
-  paused_by_name: z.string().nullable(),
-};
-
-const installationColumns = {
-  installation_id: z.uuid(),
-  installation_name: z.string(),
-  environment_slug: z.string(),
-  environment_name: z.string(),
-  adapter_key: z.string(),
-  adapter_version: z.string().nullable(),
-  compatibility: z.enum(["unverified", "verified"]),
-  last_seen_at: z.date().nullable(),
-};
-
-const accessRow = z.object(accessColumns);
-const installationRow = z.object(installationColumns);
-
-function toAccess(row: z.infer<typeof accessRow>): AgentAccessDto {
-  return {
-    status: row.access_status,
-    pausedAt: row.paused_at?.toISOString() ?? null,
-    pausedBy: row.paused_by_name,
-  };
-}
-
-function toInstallation(row: z.infer<typeof installationRow>): InstallationDto {
-  return {
-    id: row.installation_id,
-    name: row.installation_name,
-    environment: { slug: row.environment_slug, name: row.environment_name },
-    adapterKey: row.adapter_key,
-    adapterVersion: row.adapter_version,
-    compatibility: row.compatibility,
-    reporting: reportingFor(row.last_seen_at),
-    lastSeenAt: row.last_seen_at?.toISOString() ?? null,
-  };
-}
-
-const installationSelect = `
-  i.id AS installation_id, i.name AS installation_name,
-  e.slug AS environment_slug, e.name AS environment_name,
-  i.adapter_key, i.adapter_version, i.compatibility, i.last_seen_at`;
-
-const listRow = z.object({
-  id: z.uuid(),
-  external_key: z.string(),
-  description: z.string().nullable(),
-  cursor_at: z.string(),
-  tools: z.array(z.string()),
-  ...accessColumns,
-  ...installationColumns,
-});
-
-const countsRow = z.object({
-  connected: z.number(),
-  reporting: z.number(),
-  paused: z.number(),
-});
-
-/** The figures shown on Agents and Overview. Limited to who may see them. */
-export async function countAgents(
-  context: WorkspaceContext,
-  environmentId: string,
-): Promise<AgentCountsDto> {
-  const [counts] = parseRows(
-    countsRow,
-    await context.manager.query(
-      `SELECT count(*)::int AS connected,
-              count(*) FILTER (
-                WHERE i.last_seen_at > clock_timestamp() - make_interval(mins => $3)
-              )::int AS reporting,
-              count(*) FILTER (WHERE a.access_status = 'paused')::int AS paused
-       FROM nodrail.installations i
-       JOIN nodrail.agents a
-         ON a.workspace_id = i.workspace_id AND a.id = i.agent_id
-       WHERE i.workspace_id = $1 AND i.environment_id = $2
-         AND i.archived_at IS NULL AND a.archived_at IS NULL`,
-      [context.workspaceId, environmentId, REPORTING_WINDOW_MINUTES],
-    ),
-  );
-  return counts ?? { connected: 0, reporting: 0, paused: 0 };
-}
-
-export async function listAgents(
-  context: WorkspaceContext,
-  environmentSlug: string,
-  cursorValue?: string,
-): Promise<AgentListDto> {
-  const { manager, workspaceId } = context;
-  const environment = await findEnvironment(context, environmentSlug);
-  const cursor = decodeCursor(cursorValue);
-
-  const rows = parseRows(
-    listRow,
-    await manager.query(
-      `SELECT a.id, a.external_key, a.description, a.access_status, a.paused_at,
-              p.display_name AS paused_by_name, a.created_at::text AS cursor_at,
-              ${installationSelect},
-              ARRAY(SELECT DISTINCT o.tool_key FROM nodrail.observed_permissions o
-                    WHERE o.workspace_id = i.workspace_id
-                      AND o.installation_id = i.id
-                    ORDER BY o.tool_key) AS tools
-       FROM nodrail.installations i
-       JOIN nodrail.agents a
-         ON a.workspace_id = i.workspace_id AND a.id = i.agent_id
-       JOIN nodrail.environments e
-         ON e.workspace_id = i.workspace_id AND e.id = i.environment_id
-       LEFT JOIN nodrail.users p ON p.id = a.paused_by
-       WHERE i.workspace_id = $1 AND i.environment_id = $2
-         AND i.archived_at IS NULL AND a.archived_at IS NULL
-         AND ($3::timestamptz IS NULL
-              OR (a.created_at, a.id) < ($3::timestamptz, $4::uuid))
-       ORDER BY a.created_at DESC, a.id DESC
-       LIMIT $5`,
-      [workspaceId, environment.id, cursor.at, cursor.id, PAGE_SIZE + 1],
-    ),
-  );
-
-  const page = rows.slice(0, PAGE_SIZE);
-  const last = page.at(-1);
-  return {
-    items: page.map((row) => ({
-      key: row.external_key,
-      description: row.description,
-      access: toAccess(row),
-      installation: toInstallation(row),
-      tools: row.tools,
-    })),
-    nextCursor:
-      rows.length > PAGE_SIZE && last
-        ? encodeCursor(last.cursor_at, last.id)
-        : null,
-    summary: await countAgents(context, environment.id),
-  };
-}
+export { countAgents, listAgents } from "./list";
 
 const detailRow = z.object({
   id: z.uuid(),
+  managed_project_id: z.uuid().nullable(),
+  project_name: z.string().nullable(),
+  entry_agent: z.string().nullable(),
   external_key: z.string(),
   description: z.string().nullable(),
   ...accessColumns,
@@ -223,13 +80,15 @@ export async function getAgent(
   const [agent] = parseRows(
     detailRow,
     await manager.query(
-      `SELECT a.id, a.external_key, a.description, a.access_status, a.paused_at,
-              p.display_name AS paused_by_name
+      `SELECT a.id, a.external_key, a.description, a.managed_project_id, a.access_status, a.paused_at,
+              p.display_name AS paused_by_name, r.project AS project_name, r.entry_agent
        FROM nodrail.agents a
        LEFT JOIN nodrail.users p ON p.id = a.paused_by
+       LEFT JOIN nodrail.intended_revisions r ON r.workspace_id = a.workspace_id
+         AND r.project_id = a.managed_project_id AND r.environment_id = $3
        WHERE a.workspace_id = $1 AND a.external_key = $2
          AND a.archived_at IS NULL`,
-      [workspaceId, agentKey],
+      [workspaceId, agentKey, environment.id],
     ),
   );
   if (!agent) throw new AppError("NOT_FOUND");
@@ -239,10 +98,11 @@ export async function getAgent(
     await manager.query(
       `SELECT ${installationSelect}
        FROM nodrail.installations i
-       JOIN nodrail.environments e
-         ON e.workspace_id = i.workspace_id AND e.id = i.environment_id
-       WHERE i.workspace_id = $1 AND i.agent_id = $2 AND i.archived_at IS NULL
-       ORDER BY e.slug`,
+       ${installationOwner}
+       JOIN nodrail.agents a ON a.workspace_id = i.workspace_id
+         AND (i.agent_id = a.id OR (${admittedAgent}))
+       WHERE i.workspace_id = $1 AND a.id = $2 AND i.archived_at IS NULL
+       ORDER BY e.slug, i.name`,
       [workspaceId, agent.id],
     ),
   );
@@ -265,31 +125,14 @@ export async function getAgent(
 
   const canManage = context.capabilities.has("agents:manage");
   const credentials = canManage
-    ? parseRows(
-        credentialRow,
-        await manager.query(
-          `SELECT c.id, c.installation_id, c.public_prefix, c.created_at,
-                  c.last_used_at, c.revoked_at
-           FROM nodrail.installation_credentials c
-           JOIN nodrail.installations i
-             ON i.workspace_id = c.workspace_id AND i.id = c.installation_id
-           WHERE c.workspace_id = $1 AND i.agent_id = $2
-           ORDER BY c.created_at DESC, c.id DESC
-           LIMIT 100`,
-          [workspaceId, agent.id],
-        ),
-      )
+    ? await agentCredentials(context, agent.id)
     : [];
-  const toCredential = (row: z.infer<typeof credentialRow>): CredentialDto => ({
-    id: row.id,
-    prefix: row.public_prefix,
-    createdAt: row.created_at.toISOString(),
-    lastUsedAt: row.last_used_at?.toISOString() ?? null,
-    revokedAt: row.revoked_at?.toISOString() ?? null,
-  });
 
   return {
     key: agent.external_key,
+    project: agent.managed_project_id,
+    projectName: agent.project_name,
+    entryAgent: agent.entry_agent,
     description: agent.description,
     access: toAccess(agent),
     installations: installations.map((row) => ({
@@ -297,8 +140,8 @@ export async function getAgent(
       ...(canManage
         ? {
             credentials: credentials
-              .filter((item) => item.installation_id === row.installation_id)
-              .map(toCredential),
+              .filter((item) => item.installationId === row.installation_id)
+              .map(({ installationId: _id, ...credential }) => credential),
           }
         : {}),
     })),
@@ -315,6 +158,36 @@ export async function getAgent(
     })),
     canManage,
   };
+}
+
+async function agentCredentials(
+  { manager, workspaceId }: WorkspaceContext,
+  agentId: string,
+) {
+  const toCredential = (
+    row: z.infer<typeof credentialRow>,
+  ): CredentialDto & { installationId: string } => ({
+    id: row.id,
+    installationId: row.installation_id,
+    prefix: row.public_prefix,
+    createdAt: row.created_at.toISOString(),
+    lastUsedAt: row.last_used_at?.toISOString() ?? null,
+    revokedAt: row.revoked_at?.toISOString() ?? null,
+  });
+  return parseRows(
+    credentialRow,
+    await manager.query(
+      `SELECT c.id, c.installation_id, c.public_prefix, c.created_at,
+                  c.last_used_at, c.revoked_at
+           FROM nodrail.installation_credentials c
+           JOIN nodrail.installations i
+             ON i.workspace_id = c.workspace_id AND i.id = c.installation_id
+           WHERE c.workspace_id = $1 AND i.agent_id = $2
+           ORDER BY c.created_at DESC, c.id DESC
+           LIMIT 100`,
+      [workspaceId, agentId],
+    ),
+  ).map(toCredential);
 }
 
 /** For choosing an agent in forms and filters. */
@@ -334,24 +207,6 @@ export async function listAgentOptions(
      LIMIT 500`,
     [context.workspaceId, environment.id],
   );
-}
-
-/** The secret exists only in this response. Only its digest is stored. */
-async function issueCredential(
-  context: WorkspaceContext,
-  installationId: string,
-): Promise<IssuedCredentialDto> {
-  const prefix = randomBytes(6).toString("hex");
-  const secret = newSecret();
-  const credential = await context.manager.save(InstallationCredential, {
-    workspaceId: context.workspaceId,
-    installationId,
-    publicPrefix: prefix,
-    secretDigest: digestSecret(secret),
-    scopes: RUNTIME_SCOPES,
-    createdBy: context.principal.userId,
-  });
-  return { id: credential.id, prefix, secret: `ndr_${prefix}_${secret}` };
 }
 
 function installationNameFor(agentKey: string, environmentSlug: string) {
@@ -491,8 +346,9 @@ async function lockInstallation(
     id: string;
     agent_id: string;
     environment_id: string;
+    enrollment_project_id: string | null;
   }[] = await context.manager.query(
-    `SELECT i.id, i.agent_id, i.environment_id FROM nodrail.installations i
+    `SELECT i.id, i.agent_id, i.environment_id, i.enrollment_project_id FROM nodrail.installations i
        WHERE i.workspace_id = $1 AND i.id = $2 AND i.archived_at IS NULL`,
     [context.workspaceId, installationId],
   );
@@ -505,21 +361,6 @@ async function lockInstallation(
   return installation;
 }
 
-async function closeCredential(
-  context: WorkspaceContext,
-  installationId: string,
-) {
-  const { manager, workspaceId, principal } = context;
-  const [closed]: [{ id: string }[], number] = await manager.query(
-    `UPDATE nodrail.installation_credentials
-     SET revoked_at = clock_timestamp(), revoked_by = $3
-     WHERE workspace_id = $1 AND installation_id = $2 AND revoked_at IS NULL
-     RETURNING id`,
-    [workspaceId, installationId, principal.userId],
-  );
-  return closed.length > 0;
-}
-
 /** Replaces the secret without disturbing requests already waiting. */
 export async function rotateCredential(
   context: WorkspaceContext,
@@ -527,8 +368,15 @@ export async function rotateCredential(
 ): Promise<IssuedCredentialDto> {
   requireCapability(context, "agents:manage");
   const installation = await lockInstallation(context, installationId);
+  const scopes = installation.enrollment_project_id
+    ? await supportedHostScopes(context, {
+        environmentId: installation.environment_id,
+        projectId: installation.enrollment_project_id,
+      })
+    : RUNTIME_SCOPES;
+  await setEnrollmentDisabled(context, installation, false);
   await closeCredential(context, installationId);
-  const credential = await issueCredential(context, installationId);
+  const credential = await issueCredential(context, installationId, scopes);
   await recordAudit(context, {
     eventType: "credential.rotated",
     decisionCode: "credential_rotated",
@@ -550,6 +398,7 @@ export async function revokeCredential(
 ): Promise<{ revoked: boolean }> {
   requireCapability(context, "agents:manage");
   const installation = await lockInstallation(context, installationId);
+  await setEnrollmentDisabled(context, installation, true);
   if (!(await closeCredential(context, installationId)))
     return { revoked: false };
   await recordAudit(context, {
@@ -559,4 +408,18 @@ export async function revokeCredential(
     environmentId: installation.environment_id,
   });
   return { revoked: true };
+}
+
+async function setEnrollmentDisabled(
+  context: WorkspaceContext,
+  installation: Awaited<ReturnType<typeof lockInstallation>>,
+  disabled: boolean,
+) {
+  if (installation.enrollment_project_id)
+    await context.manager.query(
+      `UPDATE nodrail.installations
+       SET enrollment_disabled_at = CASE WHEN $3 THEN COALESCE(enrollment_disabled_at, clock_timestamp()) END
+       WHERE workspace_id = $1 AND id = $2`,
+      [context.workspaceId, installation.id, disabled],
+    );
 }

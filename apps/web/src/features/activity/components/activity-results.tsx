@@ -1,3 +1,4 @@
+import { docsUrl } from "@/features/guidance/docs-url";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/app/card";
@@ -22,6 +23,7 @@ import { activityHref, isFiltered } from "../filters";
 import { ActivityFilters } from "./activity-filters";
 import { ActivityKey, activityKeyBox } from "./activity-key";
 import { EventsBoard } from "./events-board";
+import { FirstCheckWaiting } from "./first-check-waiting";
 import { appPath } from "@/lib/product-path";
 
 /** The list while it loads: for events the key, then the filtered table. */
@@ -106,7 +108,9 @@ async function NoActivity({
   environment: string;
 }) {
   const view = await loadWorkspaceView(workspace);
-  const canConnect = view.capabilities.includes("agents:manage");
+  const canConnect =
+    view.capabilities.includes("agents:manage") ||
+    view.capabilities.includes("policies:write");
   return (
     <EmptyState
       title="No activity yet"
@@ -114,17 +118,16 @@ async function NoActivity({
         <Button asChild variant="outline">
           {canConnect ? (
             <Link href={appPath(workspace, environment, "agents/connect")}>
-              Connect an agent
+              Connect a project
             </Link>
           ) : (
-            <a href="/docs/quickstart">How agents connect</a>
+            <a href={docsUrl("quickstart")}>How agents connect</a>
           )}
         </Button>
       }
     >
-      Every decision Nodrail makes for your agents, and every change to rules
-      and access, is listed here. It starts when a connected agent asks before
-      acting.
+      Tool decisions and changes to rules and access appear here. Run a covered
+      tool in your host to see its first decision.
     </EmptyState>
   );
 }
@@ -177,7 +180,13 @@ export async function ActivityResults({
           items={page.items}
           selected={selected}
           query={query}
-          empty={<NoMatch noun="events" clearHref={path} />}
+          empty={
+            query.check_token && !query.cursor ? (
+              <FirstCheckWaiting key={`${path}:${query.check_token}`} />
+            ) : (
+              <NoMatch noun="events" clearHref={path} />
+            )
+          }
         />
       </DataPanel>
       <ListPager

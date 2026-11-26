@@ -2,7 +2,7 @@
 services:
   # Development data, kept between restarts.
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
     environment:
       POSTGRES_PASSWORD: nodrail_local_only
     ports:
@@ -17,7 +17,7 @@ services:
 
   # Development SMTP sink. The deployed server can use any SMTP relay.
   mailpit:
-    image: axllent/mailpit:v1.34.0
+    image: axllent/mailpit:v1.34.0@sha256:23a2ef85bc50853ab3093645d1d64679afd8887e89da5e48a88940c172591a4e
     ports:
       - "127.0.0.1:55324:8025"
       - "127.0.0.1:55325:1025"
@@ -25,7 +25,7 @@ services:
   # Empty when created; shared by every test run while it serves, never
   # recreated by one (tests/support/local-stack.ts).
   postgres-test:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
     environment:
       POSTGRES_PASSWORD: nodrail_local_only
     ports:

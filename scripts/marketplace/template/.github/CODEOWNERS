@@ -1,0 +1,5 @@
+# The maintainers own source, community policy, and the workflows that publish it.
+*                         @Nodrail/maintainers
+/.github/                 @Nodrail/maintainers
+/scripts/marketplace/     @Nodrail/maintainers
+/scripts/stage-release.mjs @Nodrail/maintainers

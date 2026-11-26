@@ -11,12 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   checklistKey,
+  environmentChecklistKey,
   firstStepKeys,
   type FirstStepKey,
   type FirstStepsDto,
 } from "@/contracts/v1/guidance";
 import { useGuidance } from "@/features/guidance/components/guidance-provider";
 import { cn } from "@/lib/utils";
+
+const setupSteps = ["agent", "rule", "decision"] as const;
 
 type StepCopy = {
   title: string;
@@ -28,15 +31,15 @@ type StepCopy = {
 
 const copy: Record<FirstStepKey, StepCopy> = {
   agent: {
-    title: "Connect an agent",
-    todo: "Give your agent its own identity and a credential for this control plane. Your provider keys stay with your team.",
-    done: "An agent is connected.",
-    link: { label: "Connect an agent", path: "/agents/connect" },
+    title: "Receive a host check-in",
+    todo: "Connect a project and run a covered tool in the host.",
+    done: "A host has checked in.",
+    link: { label: "Connect a project", path: "/agents/connect" },
   },
   rule: {
-    title: "Declare, plan and apply",
-    todo: "Declare the policy in nodrail.yaml with a connect: block that points here. Run nodrail plan to see the changes, then nodrail apply to publish the policy and install the hook on the host.",
-    done: "A policy is live in this environment.",
+    title: "Publish a rule",
+    todo: "Run nodrail apply from your project to publish its locked policy, or publish rules from Policies.",
+    done: "A rule is live in this environment.",
     link: { label: "Open Policies", path: "/policies" },
   },
   decision: {
@@ -57,9 +60,9 @@ const copy: Record<FirstStepKey, StepCopy> = {
   },
 };
 
-/** Until an integration checks in, a connected agent still has a step to go. */
+/** A registered host may still be waiting for its first check-in. */
 const notCheckedIn =
-  "Connected. Set its credential where the host runs: Overview fills in on its first check-in.";
+  "A host is registered. Start a session and run a covered tool to send its first check-in.";
 
 /**
  * Reports each step the first time this person sees it done, once per
@@ -98,17 +101,17 @@ function Step({
   current,
   base,
   workspaceBase,
-  checkedIn,
+  registered,
 }: {
   item: FirstStepKey;
   done: boolean;
   current: boolean;
   base: string;
   workspaceBase: string;
-  checkedIn: boolean;
+  registered: boolean;
 }) {
   const text = copy[item];
-  const waiting = item === "agent" && done && !checkedIn;
+  const waiting = item === "agent" && !done && registered;
   const link = waiting
     ? { label: "Open agents", href: `${base}/agents` }
     : stepLink(text, base, workspaceBase);
@@ -194,7 +197,7 @@ function StepsHeader({
           data-slot="first-steps-progress"
           className="text-xs text-muted-foreground"
         >
-          {done} of {firstStepKeys.length} done
+          {done} of {setupSteps.length} done
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-1">
@@ -241,26 +244,27 @@ function useDisclosure(folded: boolean) {
 export function FirstSteps({
   base,
   workspaceBase,
-  workspaceId,
+  environmentId,
   steps,
   checkedIn,
   folded = false,
 }: {
   base: string;
   workspaceBase: string;
-  workspaceId: string;
+  environmentId: string;
   steps: FirstStepsDto;
   checkedIn: boolean;
   folded?: boolean;
 }) {
   const { seen } = useGuidance();
-  const key = checklistKey(workspaceId);
+  const key = environmentChecklistKey(environmentId);
   const [hiding, hide] = useSetAside(key);
   const [open, disclosure] = useDisclosure(folded);
   if (seen(key)) return null;
 
-  const done = firstStepKeys.filter((item) => steps[item]).length;
-  const current = firstStepKeys.find((item) => !steps[item]);
+  const progress = { ...steps, agent: checkedIn || steps.decision };
+  const done = setupSteps.filter((item) => progress[item]).length;
+  const current = setupSteps.find((item) => !progress[item]);
 
   return (
     <section
@@ -278,7 +282,7 @@ export function FirstSteps({
           disclosure={disclosure}
         />
         <Progress
-          value={(done / firstStepKeys.length) * 100}
+          value={(done / setupSteps.length) * 100}
           aria-label="First steps done"
           className={cn(
             "mt-3 h-1.5 bg-muted *:data-[slot=progress-indicator]:bg-forest *:data-[slot=progress-indicator]:duration-500",
@@ -290,18 +294,29 @@ export function FirstSteps({
           hidden={!open}
           className="stagger grid gap-3.5"
         >
-          {firstStepKeys.map((item) => (
+          {setupSteps.map((item) => (
             <Step
               key={item}
               item={item}
-              done={steps[item]}
+              done={progress[item]}
               current={item === current}
               base={base}
               workspaceBase={workspaceBase}
-              checkedIn={checkedIn}
+              registered={steps.agent}
             />
           ))}
         </ol>
+        {open && !steps.teammate ? (
+          <p className="mt-4 text-ui text-muted-foreground">
+            Optional{" · "}
+            <Link
+              className="underline"
+              href={stepLink(copy.teammate, base, workspaceBase).href}
+            >
+              Invite a teammate
+            </Link>
+          </p>
+        ) : null}
       </Panel>
     </section>
   );

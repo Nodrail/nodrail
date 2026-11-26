@@ -1,6 +1,6 @@
 {
   "name": "@nodrail/policy-engine",
-  "version": "0.8.0",
+  "version": "0.9.1",
   "description": "The open Nodrail policy engine. Compile, test and evaluate rules locally; it decides allow or deny for every agent action on the host. Includes the CLI, TypeScript evaluator and local hook.",
   "keywords": [
     "ai",
@@ -17,18 +17,17 @@
     "mcp",
     "yaml"
   ],
-  "homepage": "https://github.com/Nodrail/nodrail-js/tree/main/packages/policy-engine#readme",
+  "homepage": "https://github.com/Nodrail/nodrail/tree/main/packages/policy-engine#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nodrail/nodrail-js.git",
+    "url": "git+https://github.com/Nodrail/nodrail.git",
     "directory": "packages/policy-engine"
   },
   "bugs": {
-    "url": "https://github.com/Nodrail/nodrail-js/issues",
+    "url": "https://github.com/Nodrail/nodrail/issues",
     "email": "hello@nodrail.com"
   },
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

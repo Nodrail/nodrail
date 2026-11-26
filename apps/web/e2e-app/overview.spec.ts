@@ -4,6 +4,7 @@ import {
   assignAgent,
   confirm,
   connect,
+  connectedWorkspace,
   expectAccessible,
   expectFitsPhone,
   seedDecision,
@@ -67,19 +68,23 @@ test.describe("overview", () => {
     );
   });
 
-  test("the first steps stay at the top until they are done", async ({
+  test("the first steps stay at the top until the first decision", async ({
     page,
   }) => {
-    const { base } = await checkedIn(page, "Steps first");
+    const { base, slug } = await connectedWorkspace(page, "Steps first");
+    await setLastSeen(slug, "support", 1);
     await page.goto(`${base}/overview`);
     const steps = page.locator("[data-slot=first-steps]");
     await expect(steps).toBeVisible();
     await expect(steps).not.toHaveAttribute("data-folded", "");
     await expect(
       page.locator("[data-slot=first-steps-progress]"),
-    ).toContainText("of 4 done");
+    ).toContainText("of 3 done");
     await expect(page.locator("[data-slot=first-step]").first()).toBeVisible();
     await expectAccessible(page);
+    await seedDecision(slug, "support");
+    await page.goto(`${base}/overview`);
+    await expect(steps).toHaveCount(0);
   });
 
   test("health tiles lead to where each is fixed", async ({ page }) => {

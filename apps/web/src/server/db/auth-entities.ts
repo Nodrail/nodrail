@@ -43,3 +43,14 @@ export class LoginRateWindow {
   @Time() expiresAt!: Date;
   @Int() attempts!: number;
 }
+
+@Entity({ schema, name: "cli_login_requests" })
+@Index("cli_login_requests_expiry", ["expiresAt"])
+export class CliLoginRequest {
+  @PrimaryColumn("text") challenge!: string;
+  @Text() origin!: string;
+  @Time() expiresAt!: Date;
+  @OptionalUuid() userId!: string | null;
+  @Fk(() => User, { user_id: "id" }, { nullable: true })
+  user!: Relation<User> | null;
+}

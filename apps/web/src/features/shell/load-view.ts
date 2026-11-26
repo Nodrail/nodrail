@@ -99,6 +99,7 @@ export function readableCursor(cursor: string | undefined) {
 const defaultMessages: Partial<Record<ErrorCode, string>> = {
   FORBIDDEN: "You don't have permission to do that.",
   NOT_FOUND: "That no longer exists.",
+  INSUFFICIENT_SCOPE: "This credential lacks the required permission.",
   INVALID_INPUT: "Check the details and try again.",
   ALREADY_EXISTS: "That already exists.",
   BUSY: "Someone else is making a change. Try again in a moment.",
@@ -131,7 +132,9 @@ export async function runWorkspaceAction<T>(
       status: "error",
       message:
         (error instanceof AppError &&
-          (messages[error.code] ?? defaultMessages[error.code])) ||
+          (error.detail ??
+            messages[error.code] ??
+            defaultMessages[error.code])) ||
         "Something went wrong. Please try again.",
     };
   }

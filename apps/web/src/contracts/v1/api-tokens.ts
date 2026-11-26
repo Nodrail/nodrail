@@ -32,6 +32,12 @@ export const scopeCapability: Record<ApiTokenScope, Capability> = {
   "inventory:write": "workspace:read",
 };
 
+export function capabilitiesForToken(scopes: ApiTokenScope[]) {
+  const allowed = new Set(scopes.map((scope) => scopeCapability[scope]));
+  if (scopes.includes("rules:write")) allowed.add("projects:apply");
+  return allowed;
+}
+
 export const apiTokenExpiries = [30, 90, 365, 0] as const;
 /** In days; 0 means the token never expires. */
 export type ApiTokenExpiry = (typeof apiTokenExpiries)[number];
@@ -98,7 +104,7 @@ export type ApiTokenListDto = {
 /** One sentence for each scope a person turns on, shown where they choose it. */
 export const scopeRisks: Record<Exclude<ApiTokenScope, "read">, string> = {
   "rules:write":
-    "Whoever holds this token can rewrite the rules as you, so never give it to an agent that Nodrail governs.",
+    "This token can publish rules and enroll machines for locked projects the token owner may apply. Keep it away from governed agents.",
   "agents:manage": "This token can issue runtime credentials and pause agents.",
   "members:manage": "This token can invite, remove and assign teammates.",
   "workspace:settings":
@@ -109,7 +115,7 @@ export const scopeRisks: Record<Exclude<ApiTokenScope, "read">, string> = {
 
 export const scopeLabels: Record<ApiTokenScope, string> = {
   read: "Read workspace control-plane data",
-  "rules:write": "Preview and publish the rules file",
+  "rules:write": "Preview and publish rules and apply locked projects",
   "agents:manage": "Manage agents and runtime credentials",
   "members:manage": "Manage teammates, invites and assignments",
   "workspace:settings": "Manage workspace settings and export data",

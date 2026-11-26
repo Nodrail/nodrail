@@ -2,7 +2,7 @@
 // operator's readiness check says what is set up and when delivery and
 // retention last ran, behind the scheduler's secret.
 import { NextRequest } from "next/server";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import * as ready from "@/app/api/health/ready/route";
 import * as deliver from "@/app/api/internal/notifications/deliver/route";
 import { admin, useDatabase } from "./world";
@@ -36,11 +36,15 @@ const call = (
   path: string,
   secret: string | null = SECRET,
   method = "GET",
+  headers: Record<string, string> = {},
 ) =>
   handler(
     new NextRequest(`http://localhost${path}`, {
       method,
-      headers: secret ? { authorization: `Bearer ${secret}` } : {},
+      headers: {
+        ...headers,
+        ...(secret ? { authorization: `Bearer ${secret}` } : {}),
+      },
     }),
   );
 
@@ -81,6 +85,44 @@ describe("readiness", () => {
       checks: { scheduler: "ok", email: "missing" },
       scheduler: { job: "deliver", runs: 1, lastError: null },
     });
+  });
+
+  test("reports a missing or unusable public login header", async () => {
+    vi.stubEnv("APP_ORIGIN", "https://control.example.test");
+    vi.stubEnv("AUTH_CLIENT_IP_HEADER", " x-client-ip ");
+    try {
+      for (const header of [{}, { "x-client-ip": "192.0.2.1, 192.0.2.2" }]) {
+        const response = await call(
+          ready.GET,
+          "/api/health/ready",
+          SECRET,
+          "GET",
+          header as Record<string, string>,
+        );
+        expect(response.status).toBe(503);
+        expect((await response.json()).checks.authClientIp).toBe(
+          "missing or invalid",
+        );
+      }
+      const response = await call(
+        ready.GET,
+        "/api/health/ready",
+        SECRET,
+        "GET",
+        { "x-client-ip": "192.0.2.1" },
+      );
+      expect((await response.json()).checks.authClientIp).toBe("ok");
+      for (const name of ["x-client ip", "   "]) {
+        vi.stubEnv("AUTH_CLIENT_IP_HEADER", name);
+        const invalid = await call(ready.GET, "/api/health/ready");
+        expect(invalid.status).toBe(503);
+        expect((await invalid.json()).checks.authClientIp).toBe(
+          "missing or invalid",
+        );
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   test("a scheduler that stopped is stale", async () => {

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { type ActionResult } from "@/components/app/action-result";
 import type { Role } from "@/contracts/v1/access";
-import type { MemberChangeDto } from "@/contracts/v1/team";
+import { inviteInput, type MemberChangeDto } from "@/contracts/v1/team";
 import {
   loadWorkspaceView,
   runWorkspaceAction,
@@ -52,25 +52,30 @@ export async function inviteAction(
   _previous: ActionResult<IssuedInvite>,
   data: FormData,
 ): Promise<ActionResult<IssuedInvite>> {
-  const email = data.get("email");
-  const role = data.get("role");
+  const parsed = inviteInput.safeParse({
+    email: data.get("email"),
+    role: data.get("role"),
+  });
+  if (!parsed.success)
+    return {
+      status: "error",
+      message:
+        parsed.error.issues[0]?.path[0] === "email"
+          ? "Enter a valid email address."
+          : "Choose a role for the invite.",
+    };
+  const { email, role } = parsed.data;
   const result = await runWorkspaceAction(
     workspace,
-    (context) => createInvite(context, { email, role }),
+    (context) => createInvite(context, parsed.data),
     {
       ALREADY_EXISTS:
         "That person is already on the team or has an open invite.",
-      INVALID_INPUT: "Enter a valid email address.",
     },
   );
   if (result.status !== "ok") return result;
   const url = `${appOrigin()}/invite/${result.value.token}`;
-  const emailed = await emailInvite(
-    workspace,
-    typeof email === "string" ? email : "",
-    role,
-    url,
-  );
+  const emailed = await emailInvite(workspace, email, role, url);
   return {
     status: "ok",
     message: emailed ? "Invite sent." : "Invite link created.",

@@ -1,0 +1,63 @@
+name: Publish marketplace update
+
+# Dispatch from main after the pinned client has been approved on npm.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketplace
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.repository == 'Nodrail/nodrail' && github.ref == 'refs/heads/main'
+    environment: marketplace
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Generate and verify
+        run: |
+          pnpm --filter @nodrail/agent-plugins... install --frozen-lockfile
+          pnpm --filter @nodrail/agent-plugins build
+          output="$RUNNER_TEMP/nodrail-marketplace-output"
+          node scripts/marketplace/generate.mjs "$output"
+          node "$output/scripts/check.mjs"
+          node "$output/scripts/verify-hook.mjs"
+      - name: Push an update branch
+        env:
+          MARKETPLACE_DEPLOY_KEY: ${{ secrets.MARKETPLACE_DEPLOY_KEY }}
+        run: |
+          set -eu
+          test -n "$MARKETPLACE_DEPLOY_KEY"
+          ssh_dir="$(mktemp -d)"
+          trap 'rm -rf "$ssh_dir"' EXIT
+          chmod 700 "$ssh_dir"
+          (umask 077; printf '%s\n' "$MARKETPLACE_DEPLOY_KEY" > "$ssh_dir/key")
+          unset MARKETPLACE_DEPLOY_KEY
+          # Verify the host against GitHub's published Ed25519 fingerprint.
+          ssh-keyscan -t ed25519 github.com > "$ssh_dir/known_hosts"
+          test "$(ssh-keygen -lf "$ssh_dir/known_hosts" | awk '{print $2}')" = 'SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU'
+          export GIT_SSH_COMMAND="ssh -i $ssh_dir/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$ssh_dir/known_hosts"
+          target="$RUNNER_TEMP/nodrail-marketplace-repo"
+          git clone --depth 1 --branch main git@github.com:Nodrail/agent-plugins.git "$target"
+          rsync -a --delete --exclude=/.git/ "$RUNNER_TEMP/nodrail-marketplace-output/" "$target/"
+          git -C "$target" add -A
+          if git -C "$target" diff --cached --quiet; then
+            echo 'Marketplace is up to date.'
+            exit 0
+          fi
+          git -C "$target" -c user.name=Nodrail -c user.email=hello@nodrail.com \
+            commit -m 'chore(plugins): regenerate the marketplace' -m "Source: Nodrail/nodrail@$GITHUB_SHA"
+          branch="automation/marketplace-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          git -C "$target" push origin "HEAD:refs/heads/$branch"
+          printf 'Open a marketplace PR from %s.\n' "$branch" >> "$GITHUB_STEP_SUMMARY"

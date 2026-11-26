@@ -437,11 +437,18 @@ export async function createRule(page: Page, base: string, rule: RuleDraft) {
   await page.waitForURL(/\/policies$/);
 }
 
-/** Connects through the real form and returns the secret it showed. */
+export async function openStandaloneSetup(page: Page) {
+  await page
+    .getByText("Standalone plugin, manual hook or SDK", { exact: true })
+    .click();
+}
+
+/** Creates a standalone credential through the real form. */
 export async function connect(page: Page, base: string, agentKey: string) {
   await page.goto(`${base}/agents/connect`);
+  await openStandaloneSetup(page);
   await page.getByLabel("Agent ID").fill(agentKey);
-  await page.getByRole("button", { name: "Connect agent" }).click();
+  await page.getByRole("button", { name: "Create credential" }).click();
   const secret = page.getByLabel("Agent credential");
   await expect(secret).toBeVisible();
   return (await secret.textContent()) ?? "";
@@ -493,7 +500,7 @@ export async function publish(page: Page) {
 
 /** Copies a one-time secret with its Copy button and checks the clipboard. */
 export async function expectCopied(page: Page, secret: string) {
-  await page.getByRole("button", { name: "Copy" }).click();
+  await page.getByRole("button", { name: "Copy", exact: true }).click();
   await expect(page.getByText("Copied.")).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     secret,

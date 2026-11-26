@@ -11,9 +11,14 @@ import {
   createRule,
   getRule,
   listRules,
+  MAX_RULES_PER_ENVIRONMENT,
   revokeRule,
   updateRule,
 } from "@/server/modules/policies";
+import {
+  applyPolicyFile,
+  previewPolicyFile,
+} from "@/server/modules/policies/rule-files";
 import {
   addMember,
   admin,
@@ -66,6 +71,40 @@ describe("creating a rule", () => {
       status: "active",
       ruleRevision: 1,
       updatedBy: "Owner",
+    });
+  });
+
+  test("at the rule limit, tells the caller to revoke one and succeeds after revocation", async () => {
+    const w = await createWorkspace();
+    const yaml = Array.from(
+      { length: MAX_RULES_PER_ENVIRONMENT },
+      (_, index) => `
+- rule: Read issues ${index}
+  tool: github
+  operation: issues.read
+  resource: { kind: issue, match: exact, value: issue-${index} }
+  effect: allow
+`,
+    ).join("");
+    const published = await asOwner(w, async (context) => {
+      const preview = await previewPolicyFile(context, ENV, yaml);
+      return applyPolicyFile(context, ENV, yaml, {
+        revision: preview.policyRevision,
+        fileDigest: preview.fileDigest,
+      });
+    });
+    expect(published.added).toBe(MAX_RULES_PER_ENVIRONMENT);
+    await expect(create(w, { name: "One too many" })).rejects.toMatchObject({
+      code: "RULE_LIMIT_REACHED",
+      detail: expect.stringContaining(
+        "Revoke an existing rule before creating another.",
+      ),
+    });
+    const before = await rulesOf(w);
+    expect(before.policyRevision).toBe(published.policyRevision);
+    await revoke(w, before.rules[0]!.logicalRuleId);
+    await expect(create(w, { name: "One too many" })).resolves.toMatchObject({
+      policyRevision: published.policyRevision + 2,
     });
   });
 

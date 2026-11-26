@@ -10,11 +10,12 @@ import {
   AppError,
   parseInput,
   readWorkspace,
-  requireCapability,
   withWorkspace,
   type WorkspaceContext,
 } from "@/server/db/context";
 import { findMyWorkspaceId } from "@/server/modules/workspaces";
+import { resolveCliSession } from "@/server/auth/cli-login";
+import { cliTokenContext } from "./cli-context";
 import { currentApiSession } from "./session";
 import {
   withPersonalToken,
@@ -93,7 +94,8 @@ function workspaceRoute<
           );
           const params = await segment.params;
           return async (context) => {
-            requireCapability(context, scopeCapability[needs.scope]);
+            if (!context.capabilities.has(scopeCapability[needs.scope]))
+              throw new AppError("FORBIDDEN", `Requires ${needs.scope}.`);
             const result = await handler(context, {
               body,
               params,
@@ -128,8 +130,42 @@ async function enterBearerWorkspace<T>(
   ) => Promise<(context: TokenContext) => Promise<T>>,
 ) {
   const token = bearerToken(request);
-  const run = await prepare(request.nextUrl.searchParams);
-  return withPersonalToken(token, needs, run);
+  const query = new URLSearchParams(request.nextUrl.searchParams);
+  const [slug, ...repeated] = query.getAll("workspace");
+  if (
+    repeated.length ||
+    (slug !== undefined && !/^[a-z0-9][a-z0-9-]{0,62}$/.test(slug))
+  )
+    throw new AppError("INVALID_INPUT", "Use a workspace slug.");
+  query.delete("workspace");
+  const run = await prepare(query);
+  if (token.startsWith("ndc_")) {
+    const principal = await resolveCliSession(token);
+    if (!principal) throw new AppError("UNAUTHENTICATED");
+    return cliTokenContext(
+      principal,
+      slug,
+      {
+        ...needs,
+        allowFirstWorkspace: request.nextUrl.pathname.endsWith("/me"),
+      },
+      run,
+    );
+  }
+  return withPersonalToken(token, needs, async (context) => {
+    if (slug) {
+      const rows: unknown[] = await context.manager.query(
+        "SELECT 1 FROM nodrail.workspaces WHERE id = $1 AND slug = $2",
+        [context.workspaceId, slug],
+      );
+      if (!rows.length)
+        throw new AppError(
+          "NOT_FOUND",
+          "This token belongs to a different workspace.",
+        );
+    }
+    return run(context);
+  });
 }
 
 type RouteAuth = "either" | "session";

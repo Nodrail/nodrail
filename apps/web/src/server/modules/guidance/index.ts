@@ -92,7 +92,8 @@ export async function getFirstSteps(
              AND (r.expires_at IS NULL OR r.expires_at > clock_timestamp())) AS rule,
          EXISTS (
            SELECT 1 FROM nodrail.action_requests ar
-           WHERE ar.workspace_id = $1 AND ar.environment_id = $2) AS decision,
+           WHERE ar.workspace_id = $1 AND ar.environment_id = $2
+             AND ar.access_epoch > 0) AS decision,
          (EXISTS (
             SELECT 1 FROM nodrail.workspace_memberships m
             WHERE m.workspace_id = $1 AND m.user_id <> $3)

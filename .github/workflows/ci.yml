@@ -1,5 +1,7 @@
 name: CI
 
+# Runs on pull requests. The main branch only takes pull requests that are up
+# to date and passed, so a merge doesn't need to run it again.
 on:
   pull_request:
   workflow_dispatch:
@@ -8,29 +10,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: server-ci-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  checks:
-    name: Server checks
-    runs-on: ubuntu-latest
+  verify:
+    name: ${{ matrix.os }}, Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    env:
-      NEXT_TELEMETRY_DISABLED: "1"
-      NODRAIL_TEST_DATABASE: nodrail_ci
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_PASSWORD: nodrail_local_only
-        ports:
-          - 54330:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,13 +30,18 @@ jobs:
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm test:backend
-      - run: pnpm test:backend
-        env:
-          NODRAIL_DEPLOYMENT: self-hosted
+      - run: pnpm verify:packages
+
+  # One stable name for the branch rule, whatever the matrix becomes.
+  passed:
+    name: CI passed
+    needs: verify
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - if: needs.verify.result != 'success'
+        run: exit 1

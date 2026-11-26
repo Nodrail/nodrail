@@ -29,7 +29,7 @@ const decisionsSql = `
              AND e.decision_code = 'denied_no_rule'))::int AS no_rule
   FROM nodrail.action_requests ar
   WHERE ar.workspace_id = $1 AND ar.environment_id = $2
-    AND ar.created_at >= ${windowStart}`;
+    AND ar.access_epoch > 0 AND ar.created_at >= ${windowStart}`;
 
 const decisionsRow = z.object({
   actions: z.number(),

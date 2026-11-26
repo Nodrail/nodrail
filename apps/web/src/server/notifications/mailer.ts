@@ -4,7 +4,10 @@ import { isLoopbackHost } from "@/server/loopback";
 import type { RenderedEmail } from "./render";
 
 export type OutgoingEmail = RenderedEmail & { to: string; messageId: string };
-export type SendEmail = (email: OutgoingEmail) => Promise<void>;
+export type SendEmail = (
+  email: OutgoingEmail,
+  signal?: AbortSignal,
+) => Promise<void>;
 
 function smtpOptions(url: string) {
   const parsed = new URL(url);
@@ -52,13 +55,17 @@ function getTransport(url: string) {
 export const emailConfigured = () =>
   Boolean(process.env.SMTP_URL && process.env.NOTIFICATIONS_FROM);
 
-export const sendEmail: SendEmail = async ({ to, messageId, ...content }) => {
+export const sendEmail: SendEmail = async (
+  { to, messageId, ...content },
+  signal,
+) => {
   const url = process.env.SMTP_URL;
   const from = process.env.NOTIFICATIONS_FROM;
   if (!url || !from) throw new Error("Email is not configured");
   await getTransport(url).sendMail({
     from,
     to,
+    signal,
     messageId: `<${messageId}@notifications.nodrail>`,
     ...content,
   });

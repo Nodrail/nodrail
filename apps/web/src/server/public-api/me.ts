@@ -42,6 +42,7 @@ export async function describeToken(context: TokenContext) {
     ),
   );
   const can = (scope: keyof typeof scopeCapability) =>
+    token.scopes.includes(scope) &&
     context.capabilities.has(scopeCapability[scope]);
   return {
     token: {
@@ -56,6 +57,7 @@ export async function describeToken(context: TokenContext) {
     person: { name: workspace.person },
     workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
     role: z.enum(roles).parse(context.role),
+    effective_scopes: token.scopes.filter(can),
     can: {
       read: can("read"),
       rulesWrite: can("rules:write"),

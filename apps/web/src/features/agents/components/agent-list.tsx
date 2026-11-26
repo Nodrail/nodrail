@@ -1,3 +1,4 @@
+import { docsUrl } from "@/features/guidance/docs-url";
 import Link from "next/link";
 import { Disclosure, EmptyState } from "@/components/app/card";
 import { ListSkeleton } from "@/components/app/skeleton-lists";
@@ -9,6 +10,7 @@ import {
 import { cardTitle } from "@/components/app/styles";
 import { Button } from "@/components/ui/button";
 import { readForPage } from "@/features/shell/load-view";
+import type { AgentListItemDto } from "@/contracts/v1/agents";
 import { listAgents } from "@/server/modules/agents";
 import { AgentRow } from "./agent-row";
 import { appPath } from "@/lib/product-path";
@@ -33,64 +35,51 @@ export async function AgentList({
   environment,
   cursor,
   canConnect,
+  canManage,
 }: {
   workspace: string;
   environment: string;
   cursor?: string;
   canConnect: boolean;
+  canManage: boolean;
 }) {
   const list = await readForPage(workspace, (context) =>
     listAgents(context, environment, cursor),
   );
   const base = appPath(workspace, environment);
 
-  if (list.summary.connected === 0)
+  if (list.summary.connected === 0 && list.items.length === 0)
     return (
       <EmptyState
-        title={canConnect ? "No agents connected yet" : "No agents to show yet"}
+        title={
+          canConnect ? "No agents registered yet" : "No agents to show yet"
+        }
         action={
           canConnect ? (
             <Button asChild variant="outline">
-              <a href="/docs/quickstart">Read the quickstart</a>
+              <a href={docsUrl("quickstart")}>Read the quickstart</a>
             </Button>
           ) : null
         }
       >
         {canConnect
-          ? "An agent is any tool that asks Nodrail before it acts, such as Claude Code or your own app. Connect one to give it an identity and a credential; your provider keys stay with your team."
-          : "Agents appear here once an admin connects them and assigns them to you."}
+          ? "Agents declared in nodrail.yaml appear here after you apply the project. Standalone integrations appear here after their credential is created."
+          : "Agents appear here once an admin assigns them to you."}
       </EmptyState>
     );
 
   return (
     <>
-      <div className="mx-px mb-2.5 flex items-baseline justify-between gap-3">
-        <h2 className={cardTitle}>Your agents</h2>
-        <span
-          data-tour="agents-status"
-          className="text-xs text-muted-foreground"
-        >
-          <strong
-            key={list.summary.connected}
-            className="inline-block animate-pop font-semibold"
-          >
-            {list.summary.connected} connected
-          </strong>{" "}
-          · {list.summary.reporting} reporting
-        </span>
-      </div>
-      <ul data-tour="agents-list" className="stagger grid gap-1.75">
-        {list.items.map((agent) => (
-          <AgentRow
-            key={agent.key}
-            agent={agent}
-            href={`${base}/agents/${agent.key}`}
-            workspace={workspace}
-            base={base}
-            canManage={canConnect}
-          />
-        ))}
-      </ul>
+      <AgentListCount
+        connected={list.summary.connected}
+        reporting={list.summary.reporting}
+      />
+      <AgentGroups
+        items={list.items}
+        base={base}
+        workspace={workspace}
+        canManage={canManage}
+      />
       {list.nextCursor ? (
         <p className="mt-3">
           <Button asChild variant="outline">
@@ -101,10 +90,81 @@ export async function AgentList({
         </p>
       ) : null}
       <Disclosure summary="What does “reporting” mean?">
-        It means the configured client integration recently sent a check-in. It
-        does not verify that a tool call ran or cover calls made outside that
+        It means a connected installation recently sent a check-in. It does not
+        verify that a tool call ran or cover calls made outside that
         integration.
       </Disclosure>
     </>
+  );
+}
+
+function AgentGroups({
+  items,
+  base,
+  workspace,
+  canManage,
+}: {
+  items: AgentListItemDto[];
+  base: string;
+  workspace: string;
+  canManage: boolean;
+}) {
+  const fallback = (agent: AgentListItemDto) =>
+    agent.installation?.machineKey === agent.key;
+  const rows = (agents: AgentListItemDto[]) =>
+    agents.map((agent) => (
+      <AgentRow
+        key={agent.key}
+        agent={agent}
+        href={`${base}/agents/${agent.key}`}
+        workspace={workspace}
+        base={base}
+        canManage={canManage}
+      />
+    ));
+  const unidentified = items.filter(fallback);
+  return (
+    <>
+      <ul
+        aria-label="Agents"
+        data-tour="agents-list"
+        className="stagger grid gap-1.75"
+      >
+        {rows(items.filter((agent) => !fallback(agent)))}
+      </ul>
+      {unidentified.length ? (
+        <ul
+          id="machines"
+          aria-label="Unidentified callers"
+          className="stagger mt-4 grid gap-1.75"
+        >
+          {rows(unidentified)}
+        </ul>
+      ) : null}
+    </>
+  );
+}
+
+function AgentListCount({
+  connected,
+  reporting,
+}: {
+  connected: number;
+  reporting: number;
+}) {
+  return (
+    <div className="mx-px mb-2.5 flex items-baseline justify-between gap-3">
+      <h2 className={cardTitle}>Your agents</h2>
+      <span data-tour="agents-status" className="text-xs text-muted-foreground">
+        <strong
+          key={connected}
+          className="inline-block animate-pop font-semibold"
+        >
+          {connected} connected{" "}
+          {connected === 1 ? "installation" : "installations"}
+        </strong>{" "}
+        · {reporting} reporting
+      </span>
+    </div>
   );
 }

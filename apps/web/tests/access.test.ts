@@ -11,6 +11,7 @@ const allowed: Record<Capability, Role[]> = {
   "workspace:read": ["admin", "policy_manager", "viewer"],
   "workspace:settings": ["admin"],
   "policies:write": ["admin", "policy_manager"],
+  "projects:apply": ["admin", "policy_manager"],
   "agents:manage": ["admin"],
   "members:manage": ["admin"],
   "ownership:manage": [],
