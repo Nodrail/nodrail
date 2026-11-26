@@ -6,6 +6,10 @@ on:
 
 permissions:
   contents: read
+concurrency:
+  group: public-policy-${{ github.ref }}
+  cancel-in-progress: true
+
 
 jobs:
   policy:

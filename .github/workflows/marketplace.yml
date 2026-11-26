@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   generate:
+    name: Publish marketplace update
     if: github.repository == 'Nodrail/nodrail' && github.ref == 'refs/heads/main'
     environment: marketplace
     runs-on: ubuntu-latest
