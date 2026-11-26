@@ -82,14 +82,21 @@ function dpapi(io: StoreIO, operation: "Protect" | "Unprotect", input: string) {
 
 function readRecord(io: StoreIO, file: string): string | null {
   try {
-    if (!lstatSync(file).isFile())
+    // Windows lacks O_NOFOLLOW. Pin the expected identity before opening.
+    const expected = io.windows ? lstatSync(file, { bigint: true }) : null;
+    if (expected && !expected.isFile())
       throw new Error("Local secret must be a regular file.");
     const flags = io.windows
       ? "r"
       : constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
     const fd = io.open(file, flags);
     try {
-      if (!fstatSync(fd).isFile())
+      const opened = fstatSync(fd, { bigint: true });
+      if (
+        !opened.isFile() ||
+        (expected &&
+          (opened.dev !== expected.dev || opened.ino !== expected.ino))
+      )
         throw new Error("Local secret must be a regular file.");
       if (!io.windows) io.fchmod(fd, 0o600);
       return readFileSync(fd, "utf8");
@@ -98,6 +105,8 @@ function readRecord(io: StoreIO, file: string): string | null {
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if ((error as NodeJS.ErrnoException).code === "ELOOP")
+      throw new Error("Local secret must be a regular file.");
     throw error;
   }
 }

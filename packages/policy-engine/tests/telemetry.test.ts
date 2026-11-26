@@ -9,6 +9,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -23,6 +24,7 @@ import {
   sendSpool,
   spoolFolder,
   wakeSender,
+  writeStatus,
 } from "../src/telemetry";
 import { telemetryObserver } from "../src/hook-telemetry";
 import { hasSecret, secretName, secretValue } from "../src/secret-refs";
@@ -385,6 +387,64 @@ describe("what can go wrong around sending", () => {
     expect(existsSync(join(folder, "sending"))).toBe(false);
     expect(wakeSender(folder, () => undefined)).toBe(true);
   });
+
+  test.skipIf(process.platform === "win32")(
+    "only sends regular batches to the configured endpoint",
+    async ({ onTestFinished }) => {
+      const folder = fresh();
+      onTestFinished(() => rmSync(folder, { recursive: true, force: true }));
+      const unrelated = join(folder, "other.jsonl");
+      writeFileSync(unrelated, `${JSON.stringify(span({ name: "other" }))}\n`);
+      symlinkSync(unrelated, join(folder, "batch-001.jsonl"));
+      const file = join(folder, "telemetry.json");
+      const endpoint = "https://collector.example/v1/traces";
+      writeFileSync(
+        file,
+        JSON.stringify({
+          project: "p",
+          traces: { endpoint, protocol: "otlp-http/json" },
+        }),
+      );
+      enqueue(folder, span());
+      const send = vi.fn<typeof fetch>(async () => new Response());
+      await sendSpool(folder, file, {}, send);
+      expect(send).toHaveBeenCalledOnce();
+      expect(send).toHaveBeenCalledWith(
+        endpoint,
+        expect.objectContaining({ redirect: "error" }),
+      );
+      expect(
+        new TextDecoder().decode(send.mock.calls[0]?.[1]?.body as Uint8Array),
+      ).not.toContain('"name":"other"');
+      expect(readStatus(folder)).toMatchObject({ sent: 1, state: "ok" });
+    },
+  );
+
+  test.skipIf(process.platform === "win32")(
+    "delivery diagnostics replace the status file atomically",
+    ({ onTestFinished }) => {
+      const folder = fresh();
+      onTestFinished(() => rmSync(folder, { recursive: true, force: true }));
+      const unrelated = join(folder, "unrelated");
+      writeFileSync(unrelated, "unchanged");
+      symlinkSync(unrelated, join(folder, "status.json"));
+      writeStatus(
+        folder,
+        {
+          sent: 0,
+          rejected: 1,
+          unknown: 0,
+          lastRejection: "receiver diagnostic",
+        },
+        undefined,
+      );
+      expect(readFileSync(unrelated, "utf8")).toBe("unchanged");
+      expect(readStatus(folder)).toMatchObject({
+        state: "degraded",
+        lastRejection: "receiver diagnostic",
+      });
+    },
+  );
 
   test("past the batches it keeps, the oldest are dropped and counted", async () => {
     const folder = fresh();

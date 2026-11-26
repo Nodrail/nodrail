@@ -50,11 +50,24 @@ const renderGate = (gate: PolicyGate) => ({
   otherwise: gate.effect,
 });
 
+function renderLimit({ metric, limit }: PolicyBudget) {
+  switch (metric) {
+    case "tool_calls":
+      return { tool_calls: limit };
+    case "tokens":
+      return { tokens: limit };
+    case "usd":
+      return { usd: limit };
+    default:
+      throw new Error("Unknown budget metric.");
+  }
+}
+
 const renderBudget = (budget: PolicyBudget) => ({
   id: budget.id,
   ...(budget.agent ? { step_agent: budget.agent } : {}),
   per: budget.per,
-  [budget.metric]: budget.limit,
+  ...renderLimit(budget),
   ...(budget.warnAt === null ? {} : { warn_at: budget.warnAt }),
   otherwise: budget.effect,
 });

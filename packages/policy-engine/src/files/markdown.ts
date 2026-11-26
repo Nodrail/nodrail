@@ -65,10 +65,12 @@ function splitFrontmatter(lines: string[]): {
 
 /** Heading text as CommonMark reads it: trimmed, with any closing `#`s dropped. */
 function atxText(rest: string) {
-  return rest
-    .trim()
-    .replace(/(?:^|[ \t]+)#+$/, "")
-    .trim();
+  const text = rest.trim();
+  let end = text.length;
+  while (end > 0 && text[end - 1] === "#") end--;
+  if (end === 0 || text[end - 1] === " " || text[end - 1] === "\t")
+    return text.slice(0, end).trimEnd();
+  return text;
 }
 
 type Fence = { char: string; length: number } | null;

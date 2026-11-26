@@ -7,7 +7,8 @@ import {
 export { shortPath };
 
 /** Served as they are: APIs, build output and files such as the favicon. */
-const SHARED_PATH = /^\/(?:api|_next)\/|\.[a-z0-9]+$/i;
+const SHARED_PREFIX = /^\/(?:api|_next)\//i;
+const FILE_SUFFIX = /\.[a-z0-9]+$/i;
 const SITE_ROOTS: ReadonlySet<string> = new Set(siteTopLevel);
 /**
  * The website's own files at the root (apps/site). The proxy is asked about
@@ -81,7 +82,8 @@ export function routeRequest(request: Request, hosts: Hosts): RouteDecision {
       status: 307,
     };
   }
-  if (SHARED_PATH.test(pathname)) return { kind: "next" };
+  if (SHARED_PREFIX.test(pathname) || FILE_SUFFIX.test(pathname))
+    return { kind: "next" };
   if (appHost && hostname === appHost) return onAppHost(request);
   if (pathname === "/") return { kind: "redirect", url: "/app", status: 307 };
   return { kind: "next" };

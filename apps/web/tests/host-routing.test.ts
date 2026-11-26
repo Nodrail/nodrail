@@ -57,6 +57,9 @@ describe("the app host", () => {
 
   test.each([
     "/api/health",
+    "/API/health",
+    "/_NEXT/build",
+    "/nested/favicon.ICO",
     "/api/webhooks/stripe",
     "/_next/static/a.js",
     "/favicon.ico",
@@ -64,6 +67,11 @@ describe("the app host", () => {
   ])("%s is served as it is", (path) =>
     expect(on("app.nodrail.com", path)).toEqual(next),
   );
+
+  test("a prefix inside the path and a suffix inside a segment are ordinary routes", () => {
+    for (const path of ["/acme/api/health", "/acme/file.png/edit"])
+      expect(on("app.nodrail.com", path)).toEqual(rewrite(`/app${path}`));
+  });
 
   test.each(["/login", "/api", "/docs", "/app"])(
     "a workspace older than the reserved slug %s keeps its /app URL",

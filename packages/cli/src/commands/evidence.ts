@@ -14,13 +14,7 @@
 //   requirement reading it is met for the current revision.
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-} from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -46,6 +40,7 @@ import {
 import { cleanRevision, workRevision } from "@nodrail/policy-engine/revision";
 import { visibleLines } from "../api.ts";
 import { UsageError, type Io } from "../io.ts";
+import { readBounded } from "../read-bounded.ts";
 import { spawn } from "../spawn.js";
 import { contractOf, parseEvidenceArgs, short } from "./evidence-shared.ts";
 import { parseSubmitArgs, submitEvidence } from "./evidence-submit.ts";
@@ -72,17 +67,19 @@ type Reading = {
 /** What the command wrote, checked against the whole contract. */
 function readResult(file: string, contract: EvidenceContract): Reading {
   const missing: Reading = { state: "missing", issues: [], value: null };
-  if (!existsSync(file) || statSync(file).size === 0) return missing;
   const invalid = (code: string): Reading => ({
     state: "invalid",
     issues: [{ path: "(value)", code }],
     value: null,
   });
-  if (statSync(file).size > PAYLOAD_BYTES.evidence) return invalid("size");
   let value: unknown;
   try {
-    value = JSON.parse(readFileSync(file, "utf8"));
-  } catch {
+    const bytes = readBounded(file, PAYLOAD_BYTES.evidence);
+    if (bytes === null) return invalid("size");
+    if (bytes.length === 0) return missing;
+    value = JSON.parse(bytes.toString("utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return missing;
     return invalid("json");
   }
   const checked = checkValue(contract.shape, value, PAYLOAD_BYTES.evidence);

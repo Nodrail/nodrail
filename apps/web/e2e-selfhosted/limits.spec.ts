@@ -60,6 +60,7 @@ test("a reporting token reads nothing; forged, malformed and oversized reports a
   ) =>
     fetch(`${baseURL}${path}`, {
       ...init,
+      redirect: "error",
       headers: { authorization: `Bearer ${token}`, ...init.headers },
     });
   expect((await call("/api/v1/me")).status).toBe(403);

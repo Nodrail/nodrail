@@ -1,9 +1,10 @@
 // Run from a public checkout. Report paths and policy labels, never matches.
 import { execFileSync } from "node:child_process";
-import { lstatSync, readFileSync } from "node:fs";
+import { constants, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { publicFileProblems } from "./public-file-policy.mjs";
 import { publicText } from "./public-text.mjs";
+import { withRegularFile } from "./regular-file.mjs";
 import { workflowProblems } from "./workflow-guard.mjs";
 
 const git = (...args) =>
@@ -16,8 +17,14 @@ const root = git("rev-parse", "--show-toplevel").trim();
 const files = git("ls-files", "--cached", "-z").split("\0").filter(Boolean);
 const problems = files.flatMap((path) => {
   const file = join(root, path);
-  if (!lstatSync(file).isFile()) return [`${path}: expected a regular file`];
-  const bytes = readFileSync(file);
+  let bytes;
+  try {
+    bytes = withRegularFile(file, constants.O_RDONLY, (fd) => readFileSync(fd));
+  } catch (error) {
+    if (["ENOENT", "ELOOP", "EMLINK", "ENOTFILE"].includes(error.code))
+      return [`${path}: expected a regular file`];
+    throw error;
+  }
   const text = publicText(path, bytes) ?? bytes.toString("utf8");
   return [...publicFileProblems(path, text), ...workflowProblems(path, text)];
 });

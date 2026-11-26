@@ -58,7 +58,8 @@ export function unsafeLink(destination: string, path: string): string | null {
       : "uses a scheme other than http, https or mailto";
   if (plain.includes("\\")) return "uses a backslash";
   if (plain.startsWith("//")) return null;
-  const target = plain.replace(/[?#].*$/, "");
+  const suffix = plain.search(/[?#]/);
+  const target = suffix === -1 ? plain : plain.slice(0, suffix);
   const from = plain.startsWith("/") ? "." : posix.dirname(path);
   const resolved = posix.normalize(
     posix.join(from, target.replace(/^\/+/, "")),

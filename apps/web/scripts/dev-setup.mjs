@@ -1,7 +1,7 @@
 // Brings up everything needed to run the product locally. Safe to run again.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import pg from "pg";
+import { seedEnv } from "./dev-env.mjs";
 import { runMigrations } from "./local-stack.mjs";
 
 const run = (command, args, options = {}) =>
@@ -57,17 +57,7 @@ const wanted = {
   STRIPE_WEBHOOK_SECRET: "whsec_local_stand_in",
   STRIPE_PRICE_PRO: "price_local_pro",
 };
-const current = existsSync(".env.local")
-  ? readFileSync(".env.local", "utf8")
-  : "";
-const missing = Object.entries(wanted).filter(
-  ([key]) => !new RegExp(`^${key}=`, "m").test(current),
-);
-if (missing.length)
-  writeFileSync(
-    ".env.local",
-    `${current}${missing.map(([key, value]) => `${key}=${value}\n`).join("")}`,
-  );
+seedEnv(".env.local", wanted);
 
 // Local only; a checkout without the hooks still works.
 try {

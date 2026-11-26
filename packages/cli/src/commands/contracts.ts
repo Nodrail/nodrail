@@ -1,7 +1,6 @@
 // `nodrail contracts` (preview): declared contracts from the terminal,
 // offline and side-effect free. They read nodrail.yaml and its resources,
 // and the file given; they write nothing and run no tool.
-import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "yaml";
 import type { Command } from "../context.ts";
@@ -32,6 +31,7 @@ import {
 import { policyItems } from "../contracts/sources.ts";
 import { CliError, UsageError } from "../io.ts";
 import { bundledCatalog } from "../project/catalog.ts";
+import { readBounded } from "../read-bounded.ts";
 import { MANIFEST_FILE } from "../project/lockfile.ts";
 import { readProject, resolveWithContracts } from "../project/project.ts";
 
@@ -150,15 +150,15 @@ function sampleValue(text: string) {
 /** The sample file's text, within the size a payload may have. */
 function readSample(cwd: string, file: string) {
   const path = resolve(cwd, file);
-  let size: number;
+  let bytes: Buffer | null;
   try {
-    size = statSync(path).size;
+    bytes = readBounded(path, MAX_SAMPLE);
   } catch {
     throw new CliError(`No file ${file}.`);
   }
-  if (size > MAX_SAMPLE)
+  if (bytes === null)
     throw new CliError(`${file} is over ${MAX_SAMPLE} bytes.`);
-  return readFileSync(path, "utf8");
+  return bytes.toString("utf8");
 }
 
 type Binding = CompiledContracts["bindings"][number];

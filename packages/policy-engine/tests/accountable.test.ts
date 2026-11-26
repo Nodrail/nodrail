@@ -5,7 +5,7 @@
 // budget's last slot.
 import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync, symlinkSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -727,7 +727,7 @@ describe("evidence requirements in the hook", () => {
     const document = documentOf(readFileSync(repo.file, "utf8"));
     if (document.version !== 4) throw new Error("expected version 4");
     const subject = workRevision(repo.repo);
-    recordEvidence(ledgerOf(repo).replace(/runs$/, "runs"), {
+    recordEvidence(ledgerOf(repo), {
       type: "evidence.recorded",
       event: randomUUID(),
       evidence: "ci-tests",
@@ -772,13 +772,38 @@ describe("evidence requirements in the hook", () => {
     // Copying the old line again changes nothing: it is still about the old subject.
     const file = join(ledgerOf(repo), "evidence", "ci-tests.jsonl");
     const line = readFileSync(file, "utf8").split("\n")[0]!;
-    const { appendFileSync } = await import("node:fs");
     appendFileSync(
       file,
       `${line.replace(/"event":"[^"]+"/, `"event":"${randomUUID()}"`)}\n`,
     );
     expect((await push(repo)).answer.permissionDecision).toBe("deny");
   });
+
+  test("opens a fresh evidence line after a partial write", async () => {
+    const repo = committed();
+    await recordCi(repo, "failed");
+    const { readEvidence, evidenceFile } = await import("../src/evidence");
+    appendFileSync(evidenceFile(ledgerOf(repo), "ci-tests"), "{");
+    await recordCi(repo, "passed");
+    expect(
+      readEvidence(ledgerOf(repo), "ci-tests").map((event) => event.value),
+    ).toEqual([{ status: "failed" }, { status: "passed" }]);
+  });
+
+  test.skipIf(process.platform === "win32")(
+    "only appends to the evidence file itself",
+    async () => {
+      const repo = committed();
+      await recordCi(repo, "failed");
+      const { evidenceFile } = await import("../src/evidence");
+      const file = evidenceFile(ledgerOf(repo), "ci-tests");
+      const before = readFileSync(repo.file, "utf8");
+      unlinkSync(file);
+      symlinkSync(repo.file, file);
+      await expect(recordCi(repo, "passed")).rejects.toThrow();
+      expect(readFileSync(repo.file, "utf8")).toBe(before);
+    },
+  );
 
   test("a failed result, or one validated against another contract, says so", async () => {
     const repo = committed();

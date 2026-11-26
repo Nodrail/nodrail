@@ -1,7 +1,10 @@
 import { spawn } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   appendFileSync,
+  closeSync,
+  constants,
+  fstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -16,6 +19,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { encodeSpans, type SpanRecord } from "./otlp.ts";
 import { deliveryOf } from "./otlp-response.ts";
+import { openRegular } from "./regular-file.ts";
 import { secretValue } from "./secret-refs.ts";
 import { telemetryFile } from "./telemetry-schema.ts";
 
@@ -240,6 +244,17 @@ export function startSender(
   child.unref();
 }
 
+function batchLines(path: string) {
+  const fd = openRegular(path, constants.O_RDONLY);
+  try {
+    if (fstatSync(fd).nlink !== 1)
+      throw new Error("Expected a private telemetry batch.");
+    return readFileSync(fd, "utf8").split("\n").filter(Boolean);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /** The batches waiting, oldest first; the newest spans become one more. */
 export function batches(folder: string) {
   try {
@@ -250,17 +265,19 @@ export function batches(folder: string) {
   } catch {
     // Nothing new.
   }
-  const waiting = readdirSync(folder)
-    .filter((name) => name.startsWith("batch-"))
+  const waiting = readdirSync(folder, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isFile() && /^batch-\d+(?:-\d+)?\.jsonl$/.test(entry.name),
+    )
+    .map((entry) => entry.name)
     .sort();
   // Too many waiting: the oldest go, counted.
   for (const name of waiting.splice(
     0,
     Math.max(0, waiting.length - MAX_BATCHES),
   )) {
-    const lines = readFileSync(join(folder, name), "utf8")
-      .split("\n")
-      .filter(Boolean);
+    const lines = batchLines(join(folder, name));
     appendFileSync(join(folder, DROPPED), "x".repeat(lines.length));
     rmSync(join(folder, name), { force: true });
   }
@@ -288,10 +305,9 @@ export async function sendSpool(
     while (waiting.length > 0 && Date.now() < until) {
       for (const name of waiting) {
         const path = join(folder, name);
-        const spans = readFileSync(path, "utf8")
-          .split("\n")
-          .filter(Boolean)
-          .map((line) => JSON.parse(line) as SpanRecord);
+        const spans = batchLines(path).map(
+          (line) => JSON.parse(line) as SpanRecord,
+        );
         const { body, contentType } = encodeSpans(
           spans,
           resource,
@@ -300,6 +316,7 @@ export async function sendSpool(
         const delivery = await deliveryOf(
           await send(config.traces.endpoint, {
             method: "POST",
+            redirect: "error",
             headers: { ...headers, "content-type": contentType },
             body,
             signal: AbortSignal.timeout(SEND_TIMEOUT),
@@ -384,7 +401,17 @@ export function writeStatus(
     dropped: droppedCount(folder),
     ...(error ? { error, retryAfter: Date.now() + BACKOFF } : {}),
   };
-  writeFileSync(join(folder, STATUS), `${JSON.stringify(status)}\n`);
+  const file = join(folder, STATUS);
+  const temporary = `${file}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, `${JSON.stringify(status)}\n`, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    renameSync(temporary, file);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
 }
 
 /** The project's name, as the spans carry it: its folder's name. */

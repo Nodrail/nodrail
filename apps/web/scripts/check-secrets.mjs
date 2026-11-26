@@ -1,7 +1,8 @@
 // Fails if anything that looks like a real credential is about to reach the repository.
 import { execFileSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { constants } from "node:fs";
 import { join } from "node:path";
+import { readLimited, withRegularFile } from "./regular-file.mjs";
 import {
   forbiddenNames,
   secretPatterns as patterns,
@@ -26,8 +27,11 @@ for (const file of files) {
   const path = join(root, file);
   let text;
   try {
-    if (statSync(path).size > 2_000_000) continue;
-    text = readFileSync(path, "utf8");
+    const bytes = withRegularFile(path, constants.O_RDONLY, (fd) =>
+      readLimited(fd, 2_000_000),
+    );
+    if (bytes === null) continue;
+    text = bytes.toString("utf8");
   } catch {
     continue;
   }

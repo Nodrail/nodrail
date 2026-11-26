@@ -189,3 +189,15 @@ test("a record removed before open is absent and other open failures propagate",
   failure.code = "EACCES";
   expect(() => store.readSecretFile(file)).toThrow(failure);
 });
+
+test("a Windows read checks the identity of the opened record", () => {
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, fixture);
+  const other = join(dirname(file), "other.json");
+  writeFileSync(other, '{"value":"other-record"}');
+  const open: typeof openSync = (_path, flags, mode) =>
+    openSync(other, flags, mode);
+  const store = createSecretStore({ platform: "win32", open, execute });
+  expect(() => store.readSecretFile(file)).toThrow("regular file");
+  expect(execute).not.toHaveBeenCalled();
+});

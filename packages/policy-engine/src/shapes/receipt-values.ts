@@ -9,8 +9,11 @@ import type { ResolvedProperty, ResolvedShape } from "./types.ts";
 
 type Options = { aliases: Record<string, string>; mode_prefix: boolean };
 
-const TRAILING = /[.,;:!?)\]]+$/;
-const word = (text: string) => text.toLowerCase().replace(TRAILING, "");
+function word(text: string) {
+  let end = text.length;
+  while (end > 0 && ".,;:!?)]".includes(text[end - 1]!)) end--;
+  return text.slice(0, end).toLowerCase();
+}
 
 /** `plan: PLANNED · release: READY` → `PLANNED · release: READY`. */
 const MODE = /^[A-Za-z][A-Za-z0-9_-]*:\s*/;
