@@ -10,8 +10,13 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**"],
-      // Cover executable source, excluding the real terminal and entry.
-      exclude: ["src/**/*.d.ts", "src/bin.ts", "src/terminal.ts"],
+      // Cover executable source, excluding the real terminal and the entries.
+      exclude: [
+        "src/**/*.d.ts",
+        "src/bin.ts",
+        "src/terminal.ts",
+        "src/mcp/command.ts",
+      ],
       reporter: ["text-summary"],
       // Thresholds apply where all supported hosts are exercised.
       thresholds:

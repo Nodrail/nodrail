@@ -67,9 +67,7 @@ We used the engine in a local adapter to evaluate QA evidence for a pull request
 | [`@nodrail/cli`](packages/cli)                     | Declare agents and rules in `nodrail.yaml`, then plan and apply them on Claude Code, Codex and Copilot.       |
 | [`@nodrail/policy-engine`](packages/policy-engine) | Compile and evaluate rules locally, test them in CI or decide calls in your own harness. No account required. |
 | [`@nodrail/client`](packages/client)               | Check wrapped tools against the policy in your Nodrail control plane, self-hosted or Nodrail Cloud.           |
-
-| [`@nodrail/mcp`](packages/mcp) | Read Activity, runs, Insights and rules through the management API. |
-| [`@nodrail/agent-plugins`](packages/agent-plugins) | Build the plugins distributed through the [generated marketplace](https://github.com/Nodrail/agent-plugins). |
+| [`@nodrail/agent-plugins`](packages/agent-plugins) | Build the plugins distributed through the [generated marketplace](https://github.com/Nodrail/agent-plugins).  |
 
 ## Connect a team workspace
 

@@ -11,8 +11,6 @@
     "../../packages/policy-engine/examples",
     "../../packages/cli/src",
     "../../packages/cli/tests",
-    "../../packages/mcp/src",
-    "../../packages/mcp/tests",
     "../../packages/web-shared/src",
     "../../packages/web-shared/e2e"
   ],

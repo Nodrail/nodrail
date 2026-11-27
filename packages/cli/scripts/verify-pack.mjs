@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkMcp } from "./verify-mcp.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cli = resolve(here, "..");
@@ -397,6 +398,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     checkPolicy(folder);
     checkProject(folder);
     checkExample(folder);
+    await checkMcp(folder, fail);
     console.log(
       "Package check passed: installed and used outside the monorepo.",
     );

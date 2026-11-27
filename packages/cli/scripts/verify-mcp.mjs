@@ -1,20 +1,9 @@
-// Installs the real tarballs (this, @nodrail/cli and the policy engine the CLI
-// depends on) outside the monorepo, starts the server over stdio against a
-// tiny fake Nodrail and lists its tools.
+// `nodrail mcp` from the installed package: starts the server over stdio
+// against a tiny fake Nodrail and lists its tools.
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { fileURLToPath } from "node:url";
-import { packAndInstall } from "../../cli/scripts/verify-pack.mjs";
-
-const here = dirname(fileURLToPath(import.meta.url));
-const mcp = resolve(here, "..");
-const cli = resolve(mcp, "../cli");
-const engine = resolve(mcp, "../policy-engine");
-const client = resolve(mcp, "../client");
 
 const me = {
   token: {
@@ -75,15 +64,22 @@ function rpc(child) {
 }
 
 async function listTools(folder, url, flags) {
-  // Run the installed entry point with this Node and no shell. Through a
-  // shell on Windows, kill() would stop only cmd.exe and leave the server
-  // holding the temporary folder open.
-  const entry = join(folder, "node_modules", "@nodrail", "mcp", "dist", "nodrail-mcp.mjs");
-  const child = spawn(process.execPath, [entry, ...flags], {
+  // This Node and no shell: through a shell on Windows, kill() would stop
+  // only cmd.exe and leave the server holding the temporary folder open.
+  const entry = join(
+    folder,
+    "node_modules",
+    "@nodrail",
+    "cli",
+    "dist",
+    "nodrail.mjs",
+  );
+  const child = spawn(process.execPath, [entry, "mcp", ...flags], {
     cwd: folder,
     env: {
       PATH: process.env.PATH,
       HOME: folder,
+      USERPROFILE: folder,
       NODRAIL_TOKEN: "ndp_pack",
       NODRAIL_URL: url,
     },
@@ -109,19 +105,18 @@ async function listTools(folder, url, flags) {
   }
 }
 
-const folder = mkdtempSync(join(tmpdir(), "nodrail-mcp-pack-"));
-const nodrail = await fakeNodrail();
-try {
-  const { fail } = packAndInstall(folder, [engine, client, cli, mcp]);
-  const url = `http://127.0.0.1:${nodrail.address().port}`;
-  const readOnly = await listTools(folder, url, []);
-  if (readOnly.includes("publish_rules") || !readOnly.includes("whoami"))
-    fail(`read-only tools: ${readOnly}`);
-  const publishing = await listTools(folder, url, ["--allow-publish"]);
-  if (!publishing.includes("publish_rules"))
-    fail(`--allow-publish tools: ${publishing}`);
-  console.log("Package check passed: installed and used outside the monorepo.");
-} finally {
-  nodrail.close();
-  rmSync(folder, { recursive: true, force: true });
+/** Read-only by default; publishing only with --allow-publish. */
+export async function checkMcp(folder, fail) {
+  const nodrail = await fakeNodrail();
+  try {
+    const url = `http://127.0.0.1:${nodrail.address().port}`;
+    const readOnly = await listTools(folder, url, []);
+    if (readOnly.includes("publish_rules") || !readOnly.includes("whoami"))
+      fail(`nodrail mcp tools: ${readOnly}`);
+    const publishing = await listTools(folder, url, ["--allow-publish"]);
+    if (!publishing.includes("publish_rules"))
+      fail(`nodrail mcp --allow-publish tools: ${publishing}`);
+  } finally {
+    nodrail.close();
+  }
 }

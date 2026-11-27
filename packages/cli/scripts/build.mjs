@@ -9,7 +9,7 @@ const shared = {
   target: "node22",
 };
 
-// The library: its index and the API client, which @nodrail/mcp imports.
+// The library: its index and the API client.
 await build({
   ...shared,
   entryPoints: ["src/index.ts", "src/api.ts"],

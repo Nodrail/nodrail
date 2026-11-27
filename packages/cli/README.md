@@ -205,6 +205,18 @@ For Claude Code, `apply` records the installed project hook in the user's privat
 Exit codes: `0` done, `1` failed (the error's code and request ID are
 printed), `2` the command line was wrong.
 
+## MCP server
+
+`nodrail mcp` serves the same reads to Claude Code or any MCP client over
+stdio, read-only unless you opt in:
+
+```sh
+claude mcp add nodrail --env NODRAIL_TOKEN=ndp_… -- npx -y @nodrail/cli mcp
+```
+
+See [docs/mcp.md](docs/mcp.md) for other clients, the tools and why a
+publishing token never belongs to an agent Nodrail governs.
+
 ## Library
 
 `@nodrail/cli/api` is the typed client the command uses:

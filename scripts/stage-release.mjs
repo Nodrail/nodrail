@@ -12,7 +12,6 @@ const packages = {
   "@nodrail/policy-engine": "packages/policy-engine",
   "@nodrail/client": "packages/client",
   "@nodrail/cli": "packages/cli",
-  "@nodrail/mcp": "packages/mcp",
 };
 
 async function isLive(name, version) {
