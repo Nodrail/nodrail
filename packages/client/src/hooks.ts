@@ -8,6 +8,7 @@ import {
   type HookResult,
   type ToolInput as Input,
 } from "@nodrail/policy-engine/actions";
+import { PACKAGE_VERSION } from "./version.ts";
 import {
   callerCandidate,
   deferToAppliedHook,
@@ -36,7 +37,7 @@ export {
   type HookResult,
 } from "@nodrail/policy-engine/actions";
 
-export const HOOK_VERSION = "0.9.1";
+export const HOOK_VERSION = PACKAGE_VERSION;
 
 /** Nodrail answers at once; past this the call is denied, within the hook's own time limit. */
 const HOOK_DEADLINE_MS = 25_000;
