@@ -239,6 +239,7 @@ Usage: nodrail <command> [options]
   insights               Decision and rule numbers; --days 7|30|90
   rules pull [file]      The rules file (to stdout without a file)
   rules push <file>      Preview, show the diff, confirm and publish
+  mcp                    Serve these reads to an MCP client over stdio; mcp --help
 
 Project policy (offline, no account; run where nodrail.yaml is)
   add <module | ./file>  Add a catalog module (@nodrail/…) or a rules file

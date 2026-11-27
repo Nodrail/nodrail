@@ -1,6 +1,6 @@
-# @nodrail/mcp
+# nodrail mcp
 
-[Nodrail](https://nodrail.com) as an MCP server: ask Claude Code, or any MCP
+`nodrail mcp` runs [Nodrail](https://nodrail.com) as an MCP server: ask Claude Code, or any MCP
 client, what an agent did, why a call was denied, or what your rules file
 says. It reads your Nodrail control plane, self-hosted or Nodrail Cloud,
 through the management API. It runs over stdio with a personal API token, and
@@ -32,12 +32,12 @@ both arrive with your token.
 ## Set up
 
 Create a token in Nodrail under **your account → API tokens** (the menu on your avatar) with only `read`.
-Requires Node.js 22 or later.
+Requires Node.js 22 or later. With the CLI installed, `nodrail mcp` works in place of `npx -y @nodrail/cli mcp`.
 
 ### Claude Code
 
 ```sh
-claude mcp add nodrail --env NODRAIL_TOKEN=ndp_… -- npx -y @nodrail/mcp
+claude mcp add nodrail --env NODRAIL_TOKEN=ndp_… -- npx -y @nodrail/cli mcp
 ```
 
 Or in a project's `.mcp.json` (keep the token out of the repository: Claude
@@ -48,7 +48,7 @@ Code expands `${NODRAIL_TOKEN}` from your environment):
   "mcpServers": {
     "nodrail": {
       "command": "npx",
-      "args": ["-y", "@nodrail/mcp"],
+      "args": ["-y", "@nodrail/cli", "mcp"],
       "env": { "NODRAIL_TOKEN": "${NODRAIL_TOKEN}" }
     }
   }
@@ -64,7 +64,7 @@ Most clients take the same `mcpServers` entry:
   "mcpServers": {
     "nodrail": {
       "command": "npx",
-      "args": ["-y", "@nodrail/mcp"],
+      "args": ["-y", "@nodrail/cli", "mcp"],
       "env": { "NODRAIL_TOKEN": "ndp_…" }
     }
   }
@@ -72,7 +72,7 @@ Most clients take the same `mcpServers` entry:
 ```
 
 Without `NODRAIL_TOKEN`, the server uses the token saved by
-[`nodrail login`](https://www.npmjs.com/package/@nodrail/cli). Set
+`nodrail login`. Set
 `NODRAIL_URL` for a self-hosted Nodrail: `NODRAIL_TOKEN` is only sent to that
 address (or to Nodrail Cloud), never to a different `--url`, and tokens only
 travel over https, except to `localhost`. Add
@@ -89,7 +89,7 @@ that has the scope:
   "mcpServers": {
     "nodrail": {
       "command": "npx",
-      "args": ["-y", "@nodrail/mcp", "--allow-publish"],
+      "args": ["-y", "@nodrail/cli", "mcp", "--allow-publish"],
       "env": { "NODRAIL_TOKEN": "${NODRAIL_PUBLISH_TOKEN}" }
     }
   }
@@ -129,7 +129,3 @@ Only with `--allow-publish` and a token that can publish:
 Fields named `parameters` and `details` hold what agents sent. The tools say
 so, but an assistant can still be misled by text an agent wrote: that is one
 more reason the publishing tool stays off by default.
-
-## License
-
-Apache-2.0

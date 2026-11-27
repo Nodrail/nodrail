@@ -18,8 +18,8 @@
     "verify:packages": "pnpm -r --workspace-concurrency=1 verify",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
-    "release": "pnpm --filter @nodrail/mcp... --filter @nodrail/client... -r build && node scripts/stage-release.mjs",
-    "lint:tools": "oxlint -c .oxlintrc.json scripts packages/agent-plugins/scripts packages/agent-plugins/tools/fuzz-hook.js packages/cli/scripts packages/mcp/scripts"
+    "release": "pnpm --filter @nodrail/cli... --filter @nodrail/client... -r build && node scripts/stage-release.mjs",
+    "lint:tools": "oxlint -c .oxlintrc.json scripts packages/agent-plugins/scripts packages/agent-plugins/tools/fuzz-hook.js packages/cli/scripts"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",

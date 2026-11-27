@@ -15,7 +15,6 @@ body:
         - "@nodrail/client (hook for Claude Code or Codex)"
         - "@nodrail/policy-engine"
         - "@nodrail/cli"
-        - "@nodrail/mcp"
         - "Claude Code or Codex plugin"
         - "Server API"
         - "Web console"

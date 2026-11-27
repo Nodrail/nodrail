@@ -1,5 +1,5 @@
-import type { Me, NodrailApi } from "@nodrail/cli/api";
-import { ApiError } from "@nodrail/cli/api";
+import type { Me, NodrailApi } from "../api.ts";
+import { ApiError } from "../api.ts";
 
 export type ServerOptions = {
   api: NodrailApi;

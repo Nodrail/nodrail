@@ -4,14 +4,10 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import type { Scope } from "@nodrail/cli/api";
+import type { Scope } from "../src/api.ts";
 import { describe, expect, test } from "vitest";
-import { serverFor } from "../src/main.ts";
-import {
-  CURRENT_YAML,
-  TOKEN,
-  fakeApi,
-} from "../../cli/tests/support/fake-api.ts";
+import { serverFor } from "../src/mcp/main.ts";
+import { CURRENT_YAML, TOKEN, fakeApi } from "./support/fake-api.ts";
 
 type Setup = {
   scopes?: Scope[];

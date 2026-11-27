@@ -1,10 +1,12 @@
 import { homedir } from "node:os";
 import { parseArgs } from "node:util";
-import { NodrailApi } from "@nodrail/cli/api";
-import { heldBackToken, resolveToken, resolveUrl } from "@nodrail/cli";
-import { createServer, VERSION } from "./server.ts";
+import { NodrailApi } from "../api.ts";
+import { heldBackToken, resolveToken, resolveUrl } from "../config.ts";
+import { createServer } from "./server.ts";
 
-export const HELP = `nodrail-mcp — Nodrail for MCP clients, over stdio
+export const HELP = `nodrail mcp — Nodrail for MCP clients, over stdio
+
+Usage: nodrail mcp [--allow-publish] [--client-confirms] [--environment <slug>] [--url <url>]
 
 Reads Activity, runs, Insights and rules with a personal token
 (NODRAIL_TOKEN, else the one saved by \`nodrail login\`). NODRAIL_URL or --url
@@ -63,5 +65,3 @@ export async function serverFor(
     clientConfirms: flags["client-confirms"],
   });
 }
-
-export { VERSION };

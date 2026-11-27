@@ -190,6 +190,9 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.2
+        version: 1.32.2(@cfworker/json-schema@4.1.6)(zod@4.6.7)
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -269,40 +272,6 @@ importers:
       zod:
         specifier: ^4.6.7
         version: 4.6.7
-
-  packages/mcp:
-    dependencies:
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.32.2
-        version: 1.32.2(@cfworker/json-schema@4.1.6)(zod@4.6.7)
-      '@nodrail/cli':
-        specifier: workspace:^
-        version: link:../cli
-      zod:
-        specifier: ^4.6.7
-        version: 4.6.7
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.6
-        version: 26.6.6
-      '@vitest/coverage-v8':
-        specifier: 5.1.0
-        version: 5.1.0(vitest@5.1.0)
-      esbuild:
-        specifier: ^0.28.2
-        version: 0.28.2
-      oxlint:
-        specifier: ^1.93.0
-        version: 1.93.0(oxlint-tsgolint@7.0.2007)
-      oxlint-tsgolint:
-        specifier: ^7.0.2007
-        version: 7.0.2007
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-      vitest:
-        specifier: ^5.1.0
-        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(jsdom@31.0.0)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/policy-engine:
     dependencies:
