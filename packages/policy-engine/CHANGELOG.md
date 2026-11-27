@@ -1,8 +1,6 @@
 # Changelog
 
-## Unreleased
-
-- Point package metadata and documentation to the unified Nodrail repository.
+## 0.9.1
 
 - Exercise Windows DPAPI, POSIX permissions, Keychain and stale lock recovery on every test host.
 
@@ -15,8 +13,6 @@
 - Show the control plane’s named pause reason in connected hooks. Preserve catalog provenance when rendering effective policy.
 
 - Support removing an origin-bound machine credential during destroy. Show a pause message that covers both machine and caller access.
-
-## 0.9.1
 
 - Keep UUID machine IDs intact in hooks and derive a matching enrollment and telemetry identity from legacy hex files.
 
