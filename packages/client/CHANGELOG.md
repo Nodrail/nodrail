@@ -1,14 +1,10 @@
 # Changelog
 
-## Unreleased
-
-- Point package metadata and documentation to the unified Nodrail repository.
+## 0.9.1
 
 - Extend coverage of unreadable project contracts and refused hand-back receipts.
 
 - Preserve the agent pause reason when a retried action returns redacted digests.
-
-## 0.9.1
 
 - Ship the policy engine fix that keeps machine identity stable across enrollment and hook telemetry.
 

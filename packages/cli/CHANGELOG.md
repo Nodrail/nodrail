@@ -1,8 +1,6 @@
 # Changelog
 
-## Unreleased
-
-- Point package metadata and documentation to the unified Nodrail repository.
+## 0.7.1
 
 - Run Windows host and connector batch launchers even when PATH omits Windows system tools.
 
@@ -27,8 +25,6 @@
 - Show the next policy version and its published rule counts in connected plans. Expand catalog changes with `--details`.
 - Send the first Inventory observation at apply time. On destroy, revoke and remove the enrolled credential and provide server-side cleanup instructions if it could not be revoked.
 - Only show the legacy migration notice for detected legacy configuration.
-
-## 0.7.1
 
 - Make connect, plan, and apply accept legacy hex machine IDs. Preserve valid machine ID files and show how to repair malformed files.
 
