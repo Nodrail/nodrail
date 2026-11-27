@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- a0740a3: Add `nodrail mcp`: Nodrail as an MCP server over stdio, which replaces the never-published `@nodrail/mcp` package. Read tools (`whoami`, `search_activity`, `get_activity_event`, `list_runs`, `get_run`, `get_rules_yaml`, `get_insights`), `preview_rules` when the token can publish rules, and `publish_rules` only with `--allow-publish`, the token's scope and the person's role, confirmed through MCP elicitation. Set up with `claude mcp add nodrail --env NODRAIL_TOKEN=ndp_… -- npx -y @nodrail/cli mcp`; see `docs/mcp.md`.
+
+### Patch Changes
+
+- d963ec8: Security hardening from the first CodeQL review of the public monorepo: local secret and evidence files are read through a checked file descriptor (no symlink or swap between check and read), receipt and Markdown parsing no longer use backtracking-prone patterns, and telemetry writes its status atomically and refuses redirects. First release built from Nodrail/nodrail.
+- 4384aaa: Point package metadata and documentation to the unified Nodrail repository.
+- Updated dependencies [d963ec8]
+- Updated dependencies [4384aaa]
+  - @nodrail/policy-engine@0.9.2
+
 ## 0.7.1
 
 - Run Windows host and connector batch launchers even when PATH omits Windows system tools.
