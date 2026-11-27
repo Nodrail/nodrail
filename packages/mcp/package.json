@@ -13,18 +13,17 @@
     "claude-code",
     "nodrail"
   ],
-  "homepage": "https://github.com/Nodrail/nodrail-js/tree/main/packages/mcp#readme",
+  "homepage": "https://github.com/Nodrail/nodrail/tree/main/packages/mcp#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nodrail/nodrail-js.git",
+    "url": "git+https://github.com/Nodrail/nodrail.git",
     "directory": "packages/mcp"
   },
   "bugs": {
-    "url": "https://github.com/Nodrail/nodrail-js/issues",
+    "url": "https://github.com/Nodrail/nodrail/issues",
     "email": "hello@nodrail.com"
   },
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

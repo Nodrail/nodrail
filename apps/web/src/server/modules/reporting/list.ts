@@ -36,7 +36,7 @@ const decisionRow = z.object({
   project_id: z.string().nullable(),
   host: z.string(),
   agent: z.string().nullable(),
-  decision: z.enum(["allow", "deny"]),
+  decision: z.enum(["allow", "deny", "would_deny"]),
   tool: z.string().nullable(),
   operation: z.string().nullable(),
   policy_revision: z.string().nullable(),

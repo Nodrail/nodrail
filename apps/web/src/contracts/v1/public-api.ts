@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   activityKinds,
   activityRanges,
+  checkToken,
   outcomeFilters,
 } from "./activity-query";
 import { contractEventsQuery } from "./contract-reads";
@@ -38,6 +39,9 @@ export const revisionQuery = apiQuery({ project_id: z.uuid() });
 
 /** A published workspace revision: the lock's digest. */
 const workspaceRevision = z.string().regex(/^[0-9a-f]{64}$/);
+export const liveRulesQuery = apiQuery({
+  workspace_revision: workspaceRevision.optional(),
+});
 
 /** A project's contract bindings: its intended revision, or the one named. */
 export const contractsQuery = apiQuery({
@@ -60,6 +64,7 @@ export const contractDiffQuery = apiQuery({
 export const activityApiQuery = apiQuery({
   ...search,
   kind: z.enum(activityKinds).optional(),
+  check_token: checkToken.optional(),
   run: z.uuid().optional(),
   cursor,
   limit,
@@ -109,6 +114,7 @@ export const publishBody = z
         "Digest returned by preview, bound to the YAML and its environment.",
       ),
     managed: managedSource.optional(),
+    reviewed_project_id: z.uuid().nullable().optional(),
   })
   .strict();
 

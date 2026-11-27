@@ -37,7 +37,7 @@ export async function settleSharedBudgets(
 
 /** Associate the same installation's reservations with its reported decision. */
 export async function attachSharedBudgets(
-  { manager, workspaceId, installationId }: RuntimeContext,
+  { manager, workspaceId, installationId, agentId }: RuntimeContext,
   actionId: string,
   callKey: string,
   policyDigest: string | null,
@@ -47,8 +47,9 @@ export async function attachSharedBudgets(
      FROM nodrail.budget_leases l
      WHERE l.workspace_id = $1 AND l.installation_id = $2 AND l.call_key = $4
        AND l.policy_digest = $5 AND l.claim_id IS NOT NULL
+       AND (l.agent_id IS NULL OR l.agent_id = $6)
        AND r.workspace_id = l.workspace_id AND r.lease_id = l.id
        AND r.action_request_id IS NULL`,
-    [workspaceId, installationId, actionId, callKey, policyDigest],
+    [workspaceId, installationId, actionId, callKey, policyDigest, agentId],
   );
 }

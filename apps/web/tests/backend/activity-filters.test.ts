@@ -65,6 +65,25 @@ describe("decisions", () => {
 });
 
 describe("shared filters", () => {
+  test("first-check filtering matches only the exact token in the event payload", async () => {
+    const w = await createWorkspace();
+    const marker = "nodrail-check-1234567890abcdef";
+    await createAgent(w, marker);
+    const checked = await createAgent(w, "checked");
+    const partial = await createAgent(w, "partial");
+    for (const [agent, token] of [
+      [checked, marker],
+      [partial, marker + "-other"],
+    ] as const)
+      await admin
+        .getRepository(AuditEvent)
+        .update({ agentId: agent.id }, { payloadSafe: { check_token: token } });
+    const general = (await list(w.owner, w, { q: marker })).items;
+    expect(general.map(({ agentKey }) => agentKey)).toContain(marker);
+    const exact = (await list(w.owner, w, { check_token: marker })).items;
+    expect(exact.map(({ agentKey }) => agentKey)).toEqual(["checked"]);
+  });
+
   test("agent narrows to one agent's events", async () => {
     const w = await createWorkspace();
     await createAgent(w, "support");

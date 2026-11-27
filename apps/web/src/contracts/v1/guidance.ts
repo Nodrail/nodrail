@@ -50,7 +50,7 @@ export const guidanceKey = z
   .string()
   .regex(
     new RegExp(
-      `^(tour:(${tourKeys.join("|")})|tours_off|whats_new|checklist:${uuid}(:(${firstStepKeys.join("|")}))?)$`,
+      `^(tour:(${tourKeys.join("|")})|tours_off|whats_new|checklist-env:${uuid}|checklist:${uuid}(:(${firstStepKeys.join("|")}))?)$`,
     ),
   );
 
@@ -72,3 +72,6 @@ export const WHATS_NEW_KEY = "whats_new";
 export const TOURS_OFF_KEY = "tours_off";
 export const checklistKey = (workspaceId: string, step?: FirstStepKey) =>
   step ? `checklist:${workspaceId}:${step}` : `checklist:${workspaceId}`;
+
+export const environmentChecklistKey = (environmentId: string) =>
+  `checklist-env:${environmentId}`;

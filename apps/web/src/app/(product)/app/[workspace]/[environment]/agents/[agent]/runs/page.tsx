@@ -1,3 +1,4 @@
+import { docsUrl } from "@/features/guidance/docs-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/app/card";
@@ -35,13 +36,12 @@ export default async function AgentRunsPage({ params }: Props) {
           title={`No runs for ${agent.key} yet`}
           action={
             <Button asChild variant="outline">
-              <a href="/docs/runs">How runs work</a>
+              <a href={docsUrl("runs")}>How runs work</a>
             </Button>
           }
         >
-          A run is one job, such as a branch or an issue, with every step and
-          action in it. This agent&apos;s runs show here once its integration
-          reports the steps it takes.
+          A tool decision can create a run for a branch or issue. This
+          agent&apos;s steps appear when its host and integration report them.
         </EmptyState>
       ) : (
         <>

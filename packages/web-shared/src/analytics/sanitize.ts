@@ -127,7 +127,9 @@ export function routePattern(
   short: boolean = shortProductUrls,
   publicPaths: PublicPaths = noPublicPaths,
 ): string {
-  const path = pathname.replace(/\/+$/, "") || "/";
+  let end = pathname.length;
+  while (end > 0 && pathname[end - 1] === "/") end--;
+  const path = pathname.slice(0, end) || "/";
   if (publicPaths.has(path)) return path;
   const segments = parts(path);
   // With short product URLs `/acme/prod/agents` is `/app/acme/prod/agents`,

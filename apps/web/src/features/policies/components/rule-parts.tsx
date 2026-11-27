@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  RepositoryPublishWarning,
+  useRepositoryProject,
+} from "./repository-policy";
+import {
   ConfirmDialog,
   type ConfirmProps,
 } from "@/components/app/confirm-dialog";
@@ -49,6 +53,7 @@ export function revokeRuleConfirm(
   workspace: string,
   environment: string,
   rule: RevocableRule,
+  reviewedProjectId: string | null,
 ): ConfirmProps<unknown> {
   return {
     kicker: "Revoke rule",
@@ -60,6 +65,7 @@ export function revokeRuleConfirm(
         environment,
         rule.logicalRuleId,
         rule.ruleRevision,
+        reviewedProjectId,
       ),
     onSuccess: () => track("rule_revoked"),
     children: (
@@ -71,6 +77,7 @@ export function revokeRuleConfirm(
           Revocation affects future checks. It does not undo a completed
           external action. The rule stays in history.
         </p>
+        <RepositoryPublishWarning />
       </>
     ),
   };
@@ -85,10 +92,11 @@ export function RevokeRuleButton({
   environment: string;
   rule: RevocableRule;
 }) {
+  const project = useRepositoryProject();
   return (
     <ConfirmDialog
       triggerLabel="Revoke"
-      {...revokeRuleConfirm(workspace, environment, rule)}
+      {...revokeRuleConfirm(workspace, environment, rule, project?.id ?? null)}
     />
   );
 }

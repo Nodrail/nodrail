@@ -43,6 +43,7 @@ const usage = (metric: "usd" | "tokens") => `
 const actionRow = z.object({
   id: z.uuid(),
   run_id: z.uuid(),
+  decided_by: z.enum(["server", "host"]),
   created_at: z.date(),
   agent: z.string().nullable(),
   agent_id: z.uuid(),
@@ -60,6 +61,7 @@ const actionRow = z.object({
 const toAction = (row: z.infer<typeof actionRow>): ReportAction => ({
   id: row.id,
   runId: row.run_id,
+  decidedBy: row.decided_by,
   at: row.created_at,
   agent: row.agent ?? MAIN_AGENT,
   descriptor: descriptorOf(row),
@@ -113,7 +115,7 @@ async function loadRows(
   const actions = parseRows(
     actionRow,
     await query(
-      `SELECT ar.id, ar.run_id, ar.created_at, s.agent, ar.agent_id,
+      `SELECT ar.id, ar.run_id, ar.decided_by, ar.created_at, s.agent, ar.agent_id,
               ar.installation_id, ar.tool_key, ar.operation_key,
               ar.resource_kind, ar.resource_id, ar.run_hold,
               COALESCE((SELECT jsonb_object_agg(p.key, p.value)

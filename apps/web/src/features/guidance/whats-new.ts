@@ -15,8 +15,8 @@ export const whatsNew: readonly WhatsNewEntry[] = [
   {
     id: "control-plane",
     title: "Set up hosts from nodrail.yaml",
-    body: "Declare the policy and a connect: block in nodrail.yaml, then run nodrail plan and nodrail apply. Apply publishes the policy here and installs the hook. Connect an agent shows the block for this environment.",
-    link: { label: "Connect an agent", path: "/agents/connect" },
+    body: "Declare the policy in nodrail.yaml and copy the command from Connect a project to sign in and review the plan. Apply publishes the policy here and installs the hook.",
+    link: { label: "Connect a project", path: "/agents/connect" },
   },
   {
     id: "no-approvals",

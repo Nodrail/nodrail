@@ -132,6 +132,16 @@ export type PolicyFileIssueDto = {
 };
 
 export type PolicyFilePreviewDto = {
+  pinsCurrent?: boolean;
+  catalogRemoved?: string[];
+  agentChanges?: { added: string[]; changed: string[]; removed: string[] };
+  publishesPolicy?: boolean;
+  workspaceLockCurrent?: boolean;
+  policyCounts?: Pick<PolicyFileResultDto, "added" | "changed" | "removed">;
+  takeover?: {
+    projectId: string;
+    hosts: { id: string; name: string }[];
+  } | null;
   issues: PolicyFileIssueDto[];
   warnings: PolicyFileIssueDto[];
   /** What the preview was computed from; applying fails if either has moved on. */

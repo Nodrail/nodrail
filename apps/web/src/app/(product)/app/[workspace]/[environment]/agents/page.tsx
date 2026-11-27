@@ -24,7 +24,8 @@ export default async function AgentsPage({
   const { workspace, environment } = await params;
   const cursor = readableCursor(firstParam((await searchParams).cursor));
   const view = await loadWorkspaceView(workspace);
-  const canConnect = view.capabilities.includes("agents:manage");
+  const canManage = view.capabilities.includes("agents:manage");
+  const canConnect = canManage || view.capabilities.includes("policies:write");
 
   return (
     <>
@@ -38,7 +39,7 @@ export default async function AgentsPage({
                 href={appPath(workspace, environment, "agents/connect")}
                 data-tour="agents-connect"
               >
-                Connect an agent
+                Connect a project
               </Link>
             </Button>
           ) : null
@@ -50,6 +51,7 @@ export default async function AgentsPage({
           environment={environment}
           cursor={cursor}
           canConnect={canConnect}
+          canManage={canManage}
         />
       </Suspense>
     </>

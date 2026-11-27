@@ -14,6 +14,8 @@ export type ErrorCode =
   | "NOT_FOUND"
   | "INVALID_INPUT"
   | "ALREADY_EXISTS"
+  | "RULE_LIMIT_REACHED"
+  | "REPOSITORY_CHANGED"
   | "RULE_CHANGED"
   | "ACTION_CHANGED"
   | "DECISION_CONFLICT"
@@ -36,6 +38,8 @@ const statusFor: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   INVALID_INPUT: 422,
   ALREADY_EXISTS: 409,
+  RULE_LIMIT_REACHED: 409,
+  REPOSITORY_CHANGED: 409,
   RULE_CHANGED: 409,
   ACTION_CHANGED: 409,
   DECISION_CONFLICT: 409,
@@ -63,6 +67,13 @@ export class AppError extends Error {
   ) {
     super(code);
     this.status = statusFor[code];
+  }
+}
+
+/** A pause denial that must commit its redacted decision before the API returns 403. */
+export class RecordedAccessDenial extends AppError {
+  constructor(detail: string) {
+    super("FORBIDDEN", detail);
   }
 }
 

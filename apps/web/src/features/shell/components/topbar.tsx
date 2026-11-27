@@ -100,18 +100,29 @@ function EnvironmentLinks({
   view,
   environmentSlug,
   section,
+  activitySearch,
 }: {
   view: WorkspaceViewDto;
   environmentSlug: string;
   section: string | null;
+  activitySearch: string;
 }) {
+  const query = new URLSearchParams(
+    section === "/activity" ? activitySearch : "",
+  );
+  for (const key of ["agent", "run", "event", "cursor"]) query.delete(key);
+  const search = query.toString();
+  const targetSection =
+    section === "/activity" && search
+      ? `/activity?${search}`
+      : (section ?? "/overview");
   return (
     <>
       <MenuLabel>Environment</MenuLabel>
       {view.environments.map((item) => (
         <MenuLink
           key={item.id}
-          href={appPath(view.slug, `${item.slug}${section ?? "/overview"}`)}
+          href={appPath(view.slug, `${item.slug}${targetSection}`)}
           aria-current={item.slug === environmentSlug ? "true" : undefined}
         >
           {item.name}
@@ -129,6 +140,31 @@ const workspaceMenuPages: ManagePage[] = settingsPages
     page.slug === "general" ? { ...page, label: "Settings" } : page,
   );
 
+function WorkspaceIdentity({
+  name,
+  environment,
+}: {
+  name: string;
+  environment?: string;
+}) {
+  return (
+    <>
+      <span
+        className={cn(avatar, "size-6 rounded-md phone:hidden")}
+        aria-hidden="true"
+      >
+        {name.slice(0, 1).toUpperCase()}
+      </span>
+      <span className="max-w-55 min-w-0 truncate phone:max-w-45">{name}</span>
+      <span className="sr-only">, {environment}</span>
+      <ChevronDown
+        aria-hidden="true"
+        className="size-3.5 text-muted-foreground transition-transform duration-150 group-open:rotate-180"
+      />
+    </>
+  );
+}
+
 /**
  * The workspace: its plan, which environment the sidebar works in, its
  * settings, and the other workspaces.
@@ -138,6 +174,7 @@ function WorkspaceMenu({
   environmentSlug,
   path,
   section,
+  activitySearch,
   plan,
   showBilling,
 }: {
@@ -145,6 +182,7 @@ function WorkspaceMenu({
   environmentSlug: string;
   path: string;
   section: string | null;
+  activitySearch: string;
   plan: PlanHint | null;
   showBilling: boolean;
 }) {
@@ -159,22 +197,7 @@ function WorkspaceMenu({
       align="start"
       triggerClassName={workspaceTrigger}
       trigger={
-        <>
-          <span
-            className={cn(avatar, "size-6 rounded-md phone:hidden")}
-            aria-hidden="true"
-          >
-            {view.name.slice(0, 1).toUpperCase()}
-          </span>
-          <span className="max-w-55 min-w-0 truncate phone:max-w-45">
-            {view.name}
-          </span>
-          <span className="sr-only">, {environment?.name}</span>
-          <ChevronDown
-            aria-hidden="true"
-            className="size-3.5 text-muted-foreground transition-transform duration-150 group-open:rotate-180"
-          />
-        </>
+        <WorkspaceIdentity name={view.name} environment={environment?.name} />
       }
     >
       <div className="flex items-center justify-between gap-2 px-1.5 pb-1.75">
@@ -190,6 +213,7 @@ function WorkspaceMenu({
         view={view}
         environmentSlug={environmentSlug}
         section={section}
+        activitySearch={activitySearch}
       />
       <MenuDivider />
       <MenuLabel>Workspace</MenuLabel>
@@ -250,6 +274,7 @@ export function Topbar({
   environmentSlug,
   path,
   section,
+  activitySearch,
   plan = null,
   showBilling = true,
   expanded,
@@ -262,6 +287,7 @@ export function Topbar({
   path: string;
   /** The page's path below the environment; null on settings and account. */
   section: string | null;
+  activitySearch: string;
   plan?: PlanHint | null;
   showBilling?: boolean;
   expanded: boolean;
@@ -295,6 +321,7 @@ export function Topbar({
           environmentSlug={environmentSlug}
           path={path}
           section={section}
+          activitySearch={activitySearch}
           plan={plan}
           showBilling={showBilling}
         />

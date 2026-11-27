@@ -2,10 +2,11 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   descriptorDigest,
+  redactPausedAction,
   type ActionDescriptor,
 } from "@nodrail/client/protocol";
 import { fingerprint } from "@nodrail/policy-engine/protocol";
-import type { DecisionCode } from "@/contracts/v1/activity";
+import { lateHostReport, type DecisionCode } from "@/contracts/v1/activity";
 import {
   evaluationOfVerdict,
   hostDecisionInput,
@@ -22,13 +23,16 @@ import { lockHostCalls } from "@/server/modules/budgets/host-order";
 import { consumeIntent } from "@/server/modules/billing/metering";
 import { liveRunPolicy } from "@/server/modules/runs/history";
 import { enterRun } from "@/server/modules/runs/steps";
+import { insertRequest, observe, observedOutcome } from "./records";
+import { callerStep, runtimeCaller } from "./caller";
+import { admitted } from "./admission";
 import {
-  agentAccess,
-  insertRequest,
-  observe,
-  observedOutcome,
-} from "./records";
-import { liveRevision, policySkew } from "./policy-revision";
+  liveRevision,
+  pinnedRevision,
+  policySkew,
+  requirePolicyOwnership,
+} from "./policy-revision";
+import { existingRun, pauseDetail } from "./pause-decisions";
 import { recordSubject } from "./subject";
 import { touch } from "./touch";
 
@@ -42,6 +46,7 @@ import { touch } from "./touch";
 const codeOf: Record<HostVerdict, DecisionCode> = {
   allow: "allowed_by_rule",
   deny: "denied_by_rule",
+  would_deny: "would_deny",
 };
 
 /**
@@ -56,46 +61,66 @@ async function versionFor(
   digest: string | null,
   live: Revision,
 ) {
-  if (!digest || digest === live.source_digest) return live.id;
-  const [historical]: { id: string }[] = await context.manager.query(
-    `SELECT id FROM nodrail.policy_versions
-     WHERE workspace_id = $1 AND environment_id = $2 AND source_digest = $3
-     ORDER BY revision DESC LIMIT 1`,
-    [context.workspaceId, context.environmentId, digest],
-  );
-  return historical?.id ?? live.id;
+  if (context.enrollmentProjectId) {
+    const pin = digest && (await pinnedRevision(context, digest));
+    if (!pin) throw new AppError("NOT_FOUND");
+    return pin;
+  }
+  if (!digest || digest === live.source_digest) return live;
+  return (await pinnedRevision(context, digest)) ?? live;
 }
 
+type Recorded = { id: string; access_epoch: number; historical: boolean };
+
 /** The key's row, if this installation used it: a retry answers with it. */
-async function known(
-  context: RuntimeContext,
-  key: string,
-  bodyDigest: string,
-): Promise<{ key: string; action_id: string } | null> {
-  const [row]: {
-    id: string;
+async function known(context: RuntimeContext, key: string, bodyDigest: string) {
+  const [row]: (Recorded & {
     decided_by: string;
     body_digest: string | null;
-  }[] = await context.manager.query(
-    `SELECT id, decided_by, body_digest FROM nodrail.action_requests
-       WHERE workspace_id = $1 AND installation_id = $2 AND idempotency_key = $3`,
+  })[] = await context.manager.query(
+    `SELECT ar.id, ar.decided_by, ar.body_digest, ar.access_epoch,
+       EXISTS (SELECT 1 FROM nodrail.audit_events ev
+         WHERE ev.workspace_id = ar.workspace_id AND ev.action_request_id = ar.id
+           AND ev.decision_code = 'host_reported_late') AS historical
+     FROM nodrail.action_requests ar
+     WHERE ar.workspace_id = $1 AND ar.installation_id = $2 AND ar.idempotency_key = $3`,
     [context.workspaceId, context.installationId, key],
   );
   if (!row) return null;
   // Another payload, or a call Cloud decided, under the same key.
   if (row.decided_by !== "host" || row.body_digest !== bodyDigest)
     throw new AppError("IDEMPOTENCY_CONFLICT");
-  return { key, action_id: row.id };
+  return row;
+}
+
+async function acknowledge(
+  caller: Awaited<ReturnType<typeof runtimeCaller>>,
+  input: HostDecisionInput,
+  { id, access_epoch, historical }: Recorded,
+): Promise<HostDecisionResult> {
+  const key = input.idempotency_key;
+  if (
+    !caller.refusal &&
+    input.verdict === "allow" &&
+    caller.epoch === access_epoch
+  )
+    await attachSharedBudgets(caller.context, id, key, input.policy_digest);
+  return {
+    key,
+    action_id: id,
+    ...(historical ? { status: lateHostReport } : {}),
+  };
 }
 
 async function recordOne(
   context: RuntimeContext,
   input: HostDecisionInput,
-  lockRuns: boolean,
   live: Revision,
 ): Promise<HostDecisionResult> {
-  const { idempotency_key: key, run, verdict } = input;
-  const descriptor: ActionDescriptor = {
+  const { idempotency_key: key, verdict } = input;
+  const caller = await runtimeCaller(context, input.agent);
+  context = caller.context;
+  const action: ActionDescriptor = {
     tool: input.tool,
     operation: input.operation,
     resource: input.resource,
@@ -103,17 +128,18 @@ async function recordOne(
   };
   const bodyDigest = fingerprint(input);
   const replayed = await known(context, key, bodyDigest);
-  const attach = async (actionId: string) => {
-    if (verdict === "allow")
-      await attachSharedBudgets(context, actionId, key, input.policy_digest);
-    return { key, action_id: actionId };
-  };
-  if (replayed) return attach(replayed.action_id);
-
-  const policyVersionId = await versionFor(context, input.policy_digest, live);
-  const place = run
-    ? await enterRun(context, { key: run.key, step: run.step }, lockRuns)
-    : null;
+  if (replayed) return acknowledge(caller, input, replayed);
+  const paused = !!input.paused_agents;
+  const historical = !admitted(caller, input);
+  const descriptor = paused ? redactPausedAction(action) : action;
+  const epoch = historical || paused ? 0 : caller.epoch;
+  const version = await versionFor(context, input.policy_digest, live);
+  const policyVersionId = version.id;
+  const place = await decisionPlace(caller, input.run, version, {
+    paused,
+    historical,
+  });
+  const pause = paused && !historical ? pauseDetail(caller) : null;
   const evaluation = evaluationOfVerdict[verdict];
   const id = randomUUID();
   const digest = descriptorDigest(context.installationId, descriptor);
@@ -124,15 +150,15 @@ async function recordOne(
     descriptor,
     digest,
     policyVersionId,
-    accessEpoch: (await agentAccess(context)).epoch,
+    accessEpoch: epoch,
     evaluation,
     place,
     hold: null,
     host: {
       policyDigest: input.policy_digest,
       policySkew: policySkew(input.policy_digest, live.source_digest),
-      rule: input.rule ?? null,
-      reason: input.reason ?? null,
+      rule: paused ? null : (input.rule ?? null),
+      reason: hostReason(input, pause),
       decidedAt: input.decided_at,
       bodyDigest,
     },
@@ -140,26 +166,81 @@ async function recordOne(
   if (!inserted) {
     const winner = await known(context, key, bodyDigest);
     if (!winner) throw new AppError("BUSY");
-    return attach(winner.action_id);
+    return acknowledge(caller, input, winner);
   }
-  const result = await attach(id);
-  await recordSubject(context, id, "submit", run?.subject);
-  await consumeIntent(context);
-  await observe(
-    context,
-    descriptor,
+  const result = await acknowledge(caller, input, {
     id,
-    observedOutcome(evaluation, !input.rule),
-  );
+    access_epoch: epoch,
+    historical,
+  });
+  if (!historical && !paused)
+    await recordLiveEffects(context, input, { id, descriptor, evaluation });
   await recordRuntimeDecision(context, {
-    eventType: "authorization.host_decided",
-    decisionCode: codeOf[verdict],
+    ...decisionAudit(input, { historical, pause }),
     actionRequestId: id,
     agentId: context.agentId,
     environmentId: context.environmentId,
     policyVersionId,
   });
   return result;
+}
+
+function hostReason(input: HostDecisionInput, pause: string | null) {
+  return input.paused_agents ? pause : (input.reason ?? null);
+}
+
+function decisionPlace(
+  caller: Awaited<ReturnType<typeof runtimeCaller>>,
+  run: HostDecisionInput["run"],
+  version: Pick<Revision, "run_policy">,
+  { paused, historical }: { paused: boolean; historical: boolean },
+) {
+  if (paused) return existingRun(caller.context, run?.key);
+  if (!run || historical) return null;
+  return enterRun(
+    caller.context,
+    { key: run.key, step: callerStep(caller, run.step) },
+    liveRunPolicy(version.run_policy) !== null,
+  );
+}
+
+function decisionAudit(
+  input: HostDecisionInput,
+  { historical, pause }: { historical: boolean; pause: string | null },
+) {
+  return {
+    eventType: historical
+      ? "authorization.host_reported_late"
+      : "authorization.host_decided",
+    decisionCode: pause
+      ? ("denied_agent_paused" as const)
+      : historical
+        ? ("host_reported_late" as const)
+        : codeOf[input.verdict],
+    payload: {
+      ...(input.check_token ? { check_token: input.check_token } : {}),
+      ...(pause ? { detail: pause } : {}),
+    },
+  };
+}
+
+async function recordLiveEffects(
+  context: RuntimeContext,
+  { run, verdict, rule }: HostDecisionInput,
+  {
+    id,
+    descriptor,
+    evaluation,
+  }: {
+    id: string;
+    descriptor: ActionDescriptor;
+    evaluation: (typeof evaluationOfVerdict)[HostVerdict];
+  },
+) {
+  await recordSubject(context, id, "submit", run?.subject);
+  await consumeIntent(context);
+  if (verdict !== "would_deny")
+    await observe(context, descriptor, id, observedOutcome(evaluation, !rule));
 }
 
 const keyOf = (raw: unknown) => {
@@ -175,7 +256,6 @@ const keyOf = (raw: unknown) => {
 async function recordItem(
   context: RuntimeContext,
   raw: unknown,
-  lockRuns: boolean,
   live: Revision,
 ): Promise<HostDecisionResult> {
   const parsed = hostDecisionInput.safeParse(raw);
@@ -184,13 +264,19 @@ async function recordItem(
   const { manager } = context;
   await manager.query("SAVEPOINT host_decision");
   try {
-    const result = await recordOne(context, parsed.data, lockRuns, live);
+    const result = await recordOne(context, parsed.data, live);
     await manager.query("RELEASE SAVEPOINT host_decision");
     return result;
   } catch (error) {
     if (!(error instanceof AppError) || error.code === "BUSY") throw error;
     await manager.query("ROLLBACK TO SAVEPOINT host_decision");
-    return { key: parsed.data.idempotency_key, error: { code: error.code } };
+    return {
+      key: parsed.data.idempotency_key,
+      error: {
+        code: error.code,
+        ...(error.detail ? { message: error.detail } : {}),
+      },
+    };
   }
 }
 
@@ -205,10 +291,10 @@ export async function recordHostDecisions(
   // Runs are held while an event is placed exactly when decisions read
   // their history, as for steps: then every place follows commit order.
   const live = await liveRevision(context);
+  await requirePolicyOwnership(context, live);
   if (!live) throw new AppError("BUSY");
-  const lockRuns = liveRunPolicy(live.run_policy) !== null;
   const results: HostDecisionResult[] = [];
   for (const raw of decisions)
-    results.push(await recordItem(context, raw, lockRuns, live));
+    results.push(await recordItem(context, raw, live));
   return { results };
 }

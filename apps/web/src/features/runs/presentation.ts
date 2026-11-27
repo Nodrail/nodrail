@@ -19,6 +19,7 @@ export function actionOutcome(action: RunActionDto): {
   tone: Tone;
   label: string;
 } {
+  if (action.pauseDenial) return { tone: "danger", label: action.pauseDenial };
   if (action.hold) return { tone: "warning", label: outcomeLabels.held };
   return {
     tone: evaluationTones[action.evaluation],

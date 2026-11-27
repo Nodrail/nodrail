@@ -5,10 +5,20 @@
 // after validation against the pinned contract. Readers dedupe on `event`.
 // Local records can be changed by whoever owns the machine: this is the
 // documented trust boundary, not an attestation. Node only.
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import {
+  appendFileSync,
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  mkdirSync,
+  readFileSync,
+  readSync,
+} from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { withRunLock } from "./ledger.ts";
+import { openRegular } from "./regular-file.ts";
 import { issueList } from "./runs.ts";
 
 const digest = z.string().regex(/^sha256:[0-9a-f]{64}$/);
@@ -96,11 +106,21 @@ export function recordEvidence(ledger: string, event: EvidenceEvent) {
   mkdirSync(folder, { recursive: true });
   withRunLock(folder, `evidence:${checked.evidence}`, () => {
     const file = evidenceFile(ledger, checked.evidence);
-    // A write cut off mid-line stays its own (unreadable, skipped) line.
-    const torn =
-      existsSync(file) && !readFileSync(file, "utf8").endsWith("\n")
-        ? readFileSync(file, "utf8").length > 0
-        : false;
-    appendFileSync(file, `${torn ? "\n" : ""}${JSON.stringify(checked)}\n`);
+    const fd = openRegular(
+      file,
+      constants.O_RDWR | constants.O_CREAT | constants.O_APPEND,
+    );
+    try {
+      // A write cut off mid-line stays its own (unreadable, skipped) line.
+      const { size } = fstatSync(fd);
+      const last = Buffer.alloc(1);
+      const torn =
+        size > 0 &&
+        readSync(fd, last, 0, 1, size - 1) === 1 &&
+        last[0] !== 0x0a;
+      appendFileSync(fd, `${torn ? "\n" : ""}${JSON.stringify(checked)}\n`);
+    } finally {
+      closeSync(fd);
+    }
   });
 }

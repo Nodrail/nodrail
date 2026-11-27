@@ -16,6 +16,8 @@ import {
 import { parseRows, type WorkspaceContext } from "@/server/db/context";
 import { reportMismatch } from "@/server/modules/activity/mismatch";
 import { countAgents } from "@/server/modules/agents";
+import { disconnectedInstallation } from "@/server/modules/agents/installation-view";
+import { visibleInEnvironment } from "@/server/modules/agents/list";
 import { findEnvironment } from "@/server/modules/workspaces";
 
 /*
@@ -51,6 +53,7 @@ async function silentIn(
               i.last_seen_at
        ${installations}
        WHERE ${live}
+         AND NOT (${disconnectedInstallation})
          AND (i.last_seen_at IS NULL
               OR i.last_seen_at <= clock_timestamp() - make_interval(mins => $3))
        ORDER BY i.last_seen_at DESC NULLS LAST, i.name
@@ -89,9 +92,7 @@ async function pausedIn(
        LEFT JOIN nodrail.users p ON p.id = a.paused_by
        WHERE a.workspace_id = $1 AND a.archived_at IS NULL
          AND a.access_status = 'paused'
-         AND EXISTS (SELECT 1 FROM nodrail.installations i
-                     WHERE i.workspace_id = a.workspace_id AND i.agent_id = a.id
-                       AND i.environment_id = $2 AND i.archived_at IS NULL)
+         AND ${visibleInEnvironment}
        ORDER BY a.paused_at DESC NULLS LAST, a.external_key
        LIMIT $3`,
       [context.workspaceId, environmentId, HEALTH_LIST_LIMIT],
@@ -175,6 +176,7 @@ async function uncoveredIn(
                 )::int AS uncovered
          FROM nodrail.action_requests ar
          WHERE ar.workspace_id = i.workspace_id AND ar.installation_id = i.id
+           AND ar.access_epoch > 0
            AND ar.created_at >= clock_timestamp() - make_interval(days => $3)
        ) c ON true
        WHERE ${live}

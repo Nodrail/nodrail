@@ -98,7 +98,7 @@ console.log(invoke("inspect"), invoke("clean"), invoked);
 
 The decisions are `allow` and `deny`. Only `inspect` appears in the invocation list. This example exercises a custom wrapper using an in-memory tool. In a real adapter, derive the descriptor from the exact call you will execute and preserve the arguments and resource through invocation. For arbitrary shell input use the documented action-mapping helpers, which also handle compound commands. Block `deny`, `none`, invalid input and evaluation errors. Run-dependent gates and budgets also need the appropriate history.
 
-[Compare integrations](https://nodrail.com/integrations) · [Evaluator test cases](https://github.com/Nodrail/nodrail-js/blob/main/packages/policy-engine/tests/fixtures/conformance-v1.json)
+[Compare integrations](https://nodrail.com/integrations) · [Evaluator test cases](https://github.com/Nodrail/nodrail/blob/main/packages/policy-engine/tests/fixtures/conformance-v1.json)
 
 ## Rule files
 
@@ -123,4 +123,4 @@ It returns `null` for a call it can't describe, which you should treat as blocke
 
 ## Versioning
 
-The package follows semantic versioning. The rule file format and the compiled policy document are versioned separately: rule files ask for an engine level with `required_engine_version` (level 3 is in preview), and documents are `version: 1`, or `version: 2` when they have gates or budgets. See [Run-history versions (preview)](runs.md#versions). [`tests/fixtures/conformance-v1.json`](https://github.com/Nodrail/nodrail-js/blob/main/packages/policy-engine/tests/fixtures/conformance-v1.json) holds test vectors for anyone building a compatible evaluator.
+The package follows semantic versioning. The rule file format and the compiled policy document are versioned separately: rule files ask for an engine level with `required_engine_version` (level 3 is in preview), and documents are `version: 1`, or `version: 2` when they have gates or budgets. See [Run-history versions (preview)](runs.md#versions). [`tests/fixtures/conformance-v1.json`](https://github.com/Nodrail/nodrail/blob/main/packages/policy-engine/tests/fixtures/conformance-v1.json) holds test vectors for anyone building a compatible evaluator.

@@ -2,7 +2,12 @@ import "server-only";
 import type { EntityManager } from "typeorm";
 import { RUNTIME_CALLS_PER_MINUTE } from "@/contracts/v1/runtime";
 import { matchesDigest } from "@/server/security/secrets";
-import { AppError, transaction, workspaceForPrefix } from "./context";
+import {
+  AppError,
+  RecordedAccessDenial,
+  transaction,
+  workspaceForPrefix,
+} from "./context";
 
 /**
  * The agent side: an installation credential (`ndr_…`) decides workspace,
@@ -26,6 +31,8 @@ export type RuntimeContext = {
   manager: EntityManager;
   workspaceId: string;
   credentialId: string;
+  pauseReplayKey?: string;
+  enrollmentProjectId?: string | null;
   installationId: string;
   agentId: string;
   environmentId: string;
@@ -34,22 +41,28 @@ export type RuntimeContext = {
 type CredentialRow = {
   id: string;
   secret_digest: string;
+  admission_key: string;
   scopes: string[];
   usable: boolean;
+  revoked_enrollment: boolean;
   installation_id: string;
   agent_id: string;
   environment_id: string;
+  enrollment_project_id: string | null;
 };
 
 const credentialPattern = /^ndr_([0-9a-f]{12})_([A-Za-z0-9_-]{43})$/;
 
 const readCredential = async (manager: EntityManager, prefix: string) => {
   const [row]: CredentialRow[] = await manager.query(
-    `SELECT c.id, c.secret_digest, c.scopes, i.id AS installation_id, i.agent_id,
+    `SELECT c.id, c.secret_digest, c.scopes, i.admission_key, i.id AS installation_id, i.agent_id,
             i.environment_id,
+            to_jsonb(i)->>'enrollment_project_id' AS enrollment_project_id,
+            c.revoked_at IS NOT NULL AND to_jsonb(i)->>'enrollment_project_id' IS NOT NULL AS revoked_enrollment,
             c.revoked_at IS NULL
               AND (c.expires_at IS NULL OR c.expires_at > clock_timestamp())
-              AND i.archived_at IS NULL AND a.archived_at IS NULL
+              AND i.archived_at IS NULL AND i.enrollment_disabled_at IS NULL
+              AND a.archived_at IS NULL
               AND w.archived_at IS NULL AS usable
      FROM nodrail.installation_credentials c
      JOIN nodrail.installations i
@@ -63,16 +76,27 @@ const readCredential = async (manager: EntityManager, prefix: string) => {
   return row;
 };
 
+type RuntimeAuth = {
+  prefix: string;
+  secret: string;
+  scope: RuntimeScope | readonly RuntimeScope[];
+  confirmDisconnect: boolean;
+};
+
 async function authenticated(
   manager: EntityManager,
-  prefix: string,
-  secret: string,
-  scope: RuntimeScope,
+  { prefix, secret, scope, confirmDisconnect }: RuntimeAuth,
 ) {
   const found = await readCredential(manager, prefix);
-  if (!found?.usable || !matchesDigest(secret, found.secret_digest))
+  if (
+    !found ||
+    !(found.usable || (confirmDisconnect && found.revoked_enrollment)) ||
+    !matchesDigest(secret, found.secret_digest)
+  )
     throw new AppError("UNAUTHENTICATED");
-  if (!found.scopes.includes(scope)) throw new AppError("FORBIDDEN");
+  const accepted = typeof scope === "string" ? [scope] : scope;
+  if (!accepted.some((value) => found.scopes.includes(value)))
+    throw new AppError("FORBIDDEN");
   return found;
 }
 
@@ -106,8 +130,9 @@ async function countCall(
  */
 export async function withRuntime<T>(
   token: string,
-  scope: RuntimeScope,
+  scope: RuntimeScope | readonly RuntimeScope[],
   run: (context: RuntimeContext) => Promise<T>,
+  mode: "disconnect" | "normal" = "normal",
 ): Promise<T> {
   const [, prefix, secret] = credentialPattern.exec(token) ?? [];
   if (!prefix || !secret) throw new AppError("UNAUTHENTICATED");
@@ -117,19 +142,19 @@ export async function withRuntime<T>(
   );
   if (!workspaceId) throw new AppError("UNAUTHENTICATED");
 
+  const confirmDisconnect = mode === "disconnect";
+  const auth = { prefix, secret, scope, confirmDisconnect };
+
   // Its own transaction, so a call waiting on locks never holds up the counter.
   await transaction({ workspaceId }, async (manager) => {
-    const { installation_id: installationId } = await authenticated(
-      manager,
-      prefix,
-      secret,
-      scope,
-    );
-    await countCall(manager, workspaceId, installationId);
+    const found = await authenticated(manager, auth);
+    // A retry with a revoked credential cannot consume a re-enrolled machine's limit.
+    if (found.usable)
+      await countCall(manager, workspaceId, found.installation_id);
   });
 
-  return transaction({ workspaceId }, async (manager) => {
-    const found = await authenticated(manager, prefix, secret, scope);
+  const result = await transaction({ workspaceId }, async (manager) => {
+    const found = await authenticated(manager, auth);
 
     await manager.query(
       `SELECT 1 FROM nodrail.environments
@@ -138,20 +163,30 @@ export async function withRuntime<T>(
     );
     await manager.query(
       `SELECT 1 FROM nodrail.agents
-       WHERE workspace_id = $1 AND id = $2 FOR SHARE`,
+       WHERE workspace_id = $1 AND id = $2 FOR ${confirmDisconnect ? "UPDATE" : "SHARE"}`,
       [workspaceId, found.agent_id],
     );
     // Revoking takes the agent lock first, so this answer cannot go stale.
-    const current = await readCredential(manager, prefix);
-    if (!current?.usable) throw new AppError("UNAUTHENTICATED");
+    const current = await authenticated(manager, auth);
 
-    return run({
-      manager,
-      workspaceId,
-      credentialId: found.id,
-      installationId: found.installation_id,
-      agentId: found.agent_id,
-      environmentId: found.environment_id,
-    });
+    try {
+      return {
+        value: await run({
+          manager,
+          workspaceId,
+          credentialId: current.id,
+          pauseReplayKey: current.admission_key,
+          enrollmentProjectId: current.enrollment_project_id,
+          installationId: found.installation_id,
+          agentId: found.agent_id,
+          environmentId: found.environment_id,
+        }),
+      };
+    } catch (error) {
+      if (error instanceof RecordedAccessDenial) return { error };
+      throw error;
+    }
   });
+  if (result.error) throw result.error;
+  return result.value;
 }

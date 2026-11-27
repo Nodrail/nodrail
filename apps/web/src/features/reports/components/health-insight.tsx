@@ -51,7 +51,7 @@ function HealthFigures({ health }: { health: HealthDto }) {
     <Figures
       figures={[
         {
-          label: "Silent agents",
+          label: "Silent installations",
           value: String(health.silent.length),
           hint: `${health.agents.reporting} of ${health.agents.connected} reporting`,
         },
@@ -85,9 +85,9 @@ export function HealthInsight({
       }
     >
       <HealthFigures health={health} />
-      <SubHeading>Silent agents</SubHeading>
+      <SubHeading>Silent installations</SubHeading>
       <InsightTable
-        label="Silent agents"
+        label="Silent installations"
         headings={["Agent", "Last seen"]}
         empty={silent.length ? null : <b>Every agent is reporting</b>}
       >

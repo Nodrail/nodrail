@@ -4,12 +4,14 @@
 import { describe, expect, test } from "vitest";
 import {
   FILE_LIMITS,
+  fileContracts,
   readFileContent,
   readStructure,
   readText,
   unsafeLink,
   type FileContract,
 } from "../../src/files/index";
+import { type CompiledContracts } from "../../src/shapes/compile";
 import { contract, fixture, fixtures } from "./support";
 
 /** Where each artifact's fixtures sit in a project, and the issue each rejected one must give. */
@@ -465,4 +467,45 @@ describe("links", () => {
       issues: [{ path: "(links)", code: "too-many" }],
     });
   });
+});
+
+test("long ATX heading whitespace and link suffixes stay bounded", () => {
+  const title = `Decision${"\t".repeat(45_000)}detail#`;
+  const suffix = "#".repeat(80_000);
+  const started = performance.now();
+  const structure = readStructure(`## ${title}\n## Outcome ###`);
+  const link = unsafeLink(`../outside.md?${suffix}`, "README.md");
+  expect(performance.now() - started).toBeLessThan(100);
+  expect(structure.headings.map(({ text }) => text)).toEqual([
+    title,
+    "Outcome",
+  ]);
+  expect(link).toBe("points outside the project");
+});
+
+test("normalizes a contract root with a long internal or trailing run of separators", () => {
+  const slashes = "/".repeat(80_000);
+  const root = `docs${slashes}adr`;
+  const compiled: CompiledContracts = {
+    dialect: 1,
+    digest: "",
+    shapes: {},
+    bindings: [
+      {
+        name: "file:adr",
+        surface: "S07",
+        digest: "",
+        shape: null,
+        options: { root: `./${root}${slashes}`, max_bytes: null },
+      },
+    ],
+    agents: {},
+    consumers: [],
+    surfaces: [],
+    consumerIds: [],
+  };
+  const started = performance.now();
+  const actual = fileContracts(compiled)[0]?.root;
+  expect(performance.now() - started).toBeLessThan(100);
+  expect(actual).toBe(root);
 });

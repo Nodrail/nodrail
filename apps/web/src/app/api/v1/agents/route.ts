@@ -6,7 +6,20 @@ import { publicRoute } from "@/server/public-api/route";
 
 export const GET = publicRoute(
   { scope: "read", access: "read", query: agentListQuery },
-  (context, call) => listAgents(context, call.environment, call.query.cursor),
+  async (context, call) => {
+    const page = await listAgents(
+      context,
+      call.environment,
+      call.query.cursor,
+      true,
+    );
+    return {
+      ...page,
+      items: page.items.flatMap((item) =>
+        item.installation ? [{ ...item, installation: item.installation }] : [],
+      ),
+    };
+  },
 );
 
 export const POST = publicRoute(

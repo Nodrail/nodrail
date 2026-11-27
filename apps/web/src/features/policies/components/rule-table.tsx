@@ -1,5 +1,7 @@
 "use client";
 
+import { useRepositoryProject } from "./repository-policy";
+
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import {
@@ -65,6 +67,7 @@ function RuleActions({
   canManage: boolean;
 }) {
   const base = appPath(workspace, environment, "policies");
+  const project = useRepositoryProject();
   const live = canManage && rule.status !== "revoked";
   return (
     <RowActions
@@ -85,7 +88,12 @@ function RuleActions({
           ? {
               label: "Revoke…",
               destructive: true,
-              confirm: revokeRuleConfirm(workspace, environment, rule),
+              confirm: revokeRuleConfirm(
+                workspace,
+                environment,
+                rule,
+                project?.id ?? null,
+              ),
             }
           : null,
       ]}

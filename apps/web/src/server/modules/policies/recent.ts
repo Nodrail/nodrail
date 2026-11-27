@@ -57,7 +57,7 @@ const actionsSql = `
     ON r.workspace_id = ar.workspace_id AND r.id = ar.run_id
    AND r.installation_id = ar.installation_id
   WHERE ar.workspace_id = $1 AND ar.environment_id = $2
-    AND ar.created_at >= ${windowStart}
+    AND ar.access_epoch > 0 AND ar.created_at >= ${windowStart}
   ORDER BY ar.created_at DESC, ar.id
   LIMIT $4`;
 

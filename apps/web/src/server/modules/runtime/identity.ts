@@ -18,6 +18,16 @@ export type RuntimeIdentity = {
 export async function readIdentity(
   context: RuntimeContext,
 ): Promise<RuntimeIdentity> {
+  const row = await readRuntimeBinding(context);
+  const live = (await liveRevision(context))?.source_digest ?? null;
+  return {
+    ...row,
+    live_policy_digest: live,
+    policy_skew: policySkew(row.policy_digest, live),
+  };
+}
+
+export async function readRuntimeBinding(context: RuntimeContext) {
   const [row]: Omit<RuntimeIdentity, "live_policy_digest" | "policy_skew">[] =
     await context.manager.query(
       `SELECT w.slug AS workspace, e.slug AS environment, a.external_key AS agent,
@@ -31,10 +41,5 @@ export async function readIdentity(
      WHERE i.workspace_id = $1 AND i.id = $2`,
       [context.workspaceId, context.installationId],
     );
-  const live = (await liveRevision(context))?.source_digest ?? null;
-  return {
-    ...row!,
-    live_policy_digest: live,
-    policy_skew: policySkew(row!.policy_digest, live),
-  };
+  return row!;
 }

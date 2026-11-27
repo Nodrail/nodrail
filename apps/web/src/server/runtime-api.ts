@@ -13,11 +13,12 @@ import { answer, bearerToken, readBody } from "@/server/http/api";
  * Nothing but a body with code "ALLOW" means a tool may run.
  */
 export function runtimeRoute<Params = object>(
-  scope: RuntimeScope,
+  scope: RuntimeScope | readonly RuntimeScope[],
   handler: (
     context: RuntimeContext,
     call: { body: unknown; request: NextRequest; params: Params },
   ) => Promise<unknown>,
+  mode?: "disconnect",
 ) {
   return (
     request: NextRequest,
@@ -27,8 +28,11 @@ export function runtimeRoute<Params = object>(
       const token = bearerToken(request);
       const body = await readBody(request, MAX_RUNTIME_BODY_BYTES);
       const params = await segment.params;
-      return withRuntime(token, scope, (context) =>
-        handler(context, { body, request, params }),
+      return withRuntime(
+        token,
+        scope,
+        (context) => handler(context, { body, request, params }),
+        mode,
       );
     });
 }

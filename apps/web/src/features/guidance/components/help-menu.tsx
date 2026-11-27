@@ -1,5 +1,6 @@
 "use client";
 
+import { docsUrl } from "@/features/guidance/docs-url";
 import { CircleHelp } from "lucide-react";
 import { useRef, type MouseEvent } from "react";
 import { track } from "@/components/analytics/posthog";
@@ -17,10 +18,10 @@ import { useGuidance } from "./guidance-provider";
 import { WhatsNewDialog } from "./whats-new-dialog";
 
 const docs = [
-  { label: "Quickstart", href: "/docs/quickstart" },
-  { label: "Writing rules", href: "/docs/rules" },
-  { label: "Runs, gates and budgets", href: "/docs/runs" },
-  { label: "All documentation", href: "/docs" },
+  { label: "Quickstart", href: docsUrl("quickstart") },
+  { label: "Writing rules", href: docsUrl("rules") },
+  { label: "Runs, gates and budgets", href: docsUrl("runs") },
+  { label: "All documentation", href: docsUrl() },
 ];
 
 /** The menu's own button, which focus returns to once a menu item is done. */

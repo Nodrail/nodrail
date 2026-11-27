@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectPreviewBody } from "@/contracts/v1/project-apply";
 import { insights } from "@/contracts/v1/insights-responses";
 import { reconcileInput, reservationsQuery } from "@/contracts/v1/budgets";
 import { projectionRevisionInput } from "@/contracts/v1/declared-contracts";
@@ -22,10 +23,15 @@ const write = { management: "rules:write" } as const;
 const reporting = { management: "inventory:write", bearerOnly: true } as const;
 
 export const existingOperations = [
-  operation("get", "/me", "Describe the calling personal access token", {
-    auth: { ...read, bearerOnly: true },
-    query,
-  }),
+  operation(
+    "get",
+    "/me",
+    "Describe the management credential and its effective scopes",
+    {
+      auth: { ...read, bearerOnly: true },
+      query,
+    },
+  ),
   operation("get", "/activity", "List activity events", {
     auth: read,
     query: input.activityApiQuery,
@@ -62,7 +68,7 @@ export const existingOperations = [
   operation("post", "/rules/preview", "Preview a rules file", {
     auth: write,
     query,
-    body: input.previewBody,
+    body: projectPreviewBody,
     result: policyFilePreview,
   }),
   operation("post", "/rules/publish", "Publish the previewed rules file", {

@@ -185,7 +185,9 @@ describe("health", () => {
       />,
     );
     expect(
-      screen.getByText("Every agent checked in within 30 minutes."),
+      screen.getByText(
+        "Every connected installation checked in within 30 minutes.",
+      ),
     ).toBeVisible();
     expect(screen.getByText(/No silent agents or stalled steps/)).toBeVisible();
     rerender(
@@ -204,7 +206,9 @@ describe("health", () => {
         billingHref={null}
       />,
     );
-    const agents = screen.getByRole("link", { name: /Agents reporting/ });
+    const agents = screen.getByRole("link", {
+      name: /Installations reporting/,
+    });
     expect(agents).toHaveAttribute("href", `${base}/agents`);
     expect(agents).toHaveTextContent("2 of 4");
     expect(agents).toHaveTextContent("Silent: a, b");

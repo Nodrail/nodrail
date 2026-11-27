@@ -25,8 +25,10 @@ function StepsCell({ run }: { run: RunSummaryDto }) {
   return (
     <td>
       {run.agents.length
-        ? run.agents.map(({ agent, steps }) => `${agent} ${steps}`).join(" · ")
-        : "No steps yet"}
+        ? run.agents
+            .map(({ agent, steps }) => (steps ? `${agent} ${steps}` : agent))
+            .join(" · ")
+        : "No steps reported"}
       <small>
         {plural(run.steps, "step")} · {plural(run.actions, "action")}
       </small>
@@ -39,11 +41,12 @@ function StepsCell({ run }: { run: RunSummaryDto }) {
  * the agent's own word.
  */
 function VerdictsCell({ run }: { run: RunSummaryDto }) {
-  if (!run.agents.length) return <td data-blank>—</td>;
+  const steppers = run.agents.filter(({ steps }) => steps > 0);
+  if (!steppers.length) return <td data-blank>—</td>;
   return (
     <td>
       <span className="flex flex-wrap gap-x-2.5 gap-y-1">
-        {run.agents.map(({ agent, verdict, finished }) => (
+        {steppers.map(({ agent, verdict, finished }) => (
           <span
             key={agent}
             data-slot="run-verdict"
@@ -108,11 +111,7 @@ export function RunsTable({
               <DataTitleLink href={runPath(base, run.id)}>
                 {run.key}
               </DataTitleLink>
-              <small>
-                {[run.agentKey, run.installationName]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </small>
+              <small>{run.agentKey ?? run.installationName}</small>
             </td>
             <StepsCell run={run} />
             <VerdictsCell run={run} />

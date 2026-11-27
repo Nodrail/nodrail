@@ -28,6 +28,15 @@ function event(
 }
 
 describe("route patterns", () => {
+  test("long runs of separators preserve the route within the timing budget", () => {
+    const separators = "/".repeat(80_000);
+    const started = performance.now();
+    const middle = routePattern(`/invite${separators}abc123`);
+    const trailing = routePattern(`/invite/abc123${separators}`);
+    expect(performance.now() - started).toBeLessThan(100);
+    expect([middle, trailing]).toEqual(["/invite/[token]", "/invite/[token]"]);
+  });
+
   test.each([
     ["/invite/abc123", "/invite/[token]"],
     ["/invite/abc123/", "/invite/[token]"],
@@ -220,6 +229,6 @@ describe("content security policy", () => {
       /connect-src 'self' https:\/\/us\.i\.posthog\.com https:\/\/us-assets\.i\.posthog\.com/,
     );
     expect(value).not.toMatch(/googletagmanager|google-analytics/);
-    expect(value).not.toMatch(/challenges\.cloudflare\.com/);
+    expect(value).not.toContain("challenges.cloudflare.com");
   });
 });

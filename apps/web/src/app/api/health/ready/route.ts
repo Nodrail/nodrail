@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { clientSource } from "@/server/auth/source";
 import { appOrigin } from "@/server/app-origin";
 import { asAuthenticator, asNotifier } from "@/server/db/context";
 import { deploymentMode } from "@/server/deployment";
@@ -61,6 +62,8 @@ export async function GET(request: NextRequest) {
   const checks = {
     database,
     auth,
+    authClientIp:
+      clientSource(request.headers) === null ? "missing or invalid" : "ok",
     email: configured("SMTP_URL", "NOTIFICATIONS_FROM")
       ? "configured"
       : "missing",
@@ -74,6 +77,7 @@ export async function GET(request: NextRequest) {
   const ready =
     checks.database === "ok" &&
     checks.auth === "configured" &&
+    checks.authClientIp === "ok" &&
     checks.scheduler === "ok";
   return NextResponse.json(
     { ready, deployment: deploymentMode(), checks, scheduler: deliver },

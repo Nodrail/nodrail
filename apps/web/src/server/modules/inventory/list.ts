@@ -12,6 +12,7 @@ import {
   type WorkspaceContext,
 } from "@/server/db/context";
 import { findEnvironment } from "@/server/modules/workspaces";
+import { disconnectedInstallation } from "@/server/modules/agents/installation-view";
 import { intendedRevisions } from "./revisions";
 
 /** Behind when the team published a revision and this one was applied from another. */
@@ -30,6 +31,7 @@ const reportRow = z.object({
   agent: z.string().nullable(),
   activation: z.enum(["verified", "configured", "inactive", "unknown"]),
   in_step: z.boolean(),
+  disconnected: z.boolean(),
   drift: z.number(),
   unmanaged: z.record(z.string(), z.number()),
   names: z
@@ -38,6 +40,7 @@ const reportRow = z.object({
   applied_revision: z.string().nullable(),
   locked_revision: z.string().nullable(),
   observed_at: z.date(),
+  last_seen_at: z.date(),
 });
 
 /** Fresh reports by what they say about the hook. */
@@ -64,10 +67,14 @@ export async function listInventory(
     reportRow,
     await context.manager.query(
       `SELECT r.user_id, u.display_name, r.machine, r.project, r.project_id, r.host, r.agent,
-              r.activation, r.in_step, r.drift, r.unmanaged, r.names,
-              r.applied_revision, r.locked_revision, r.observed_at
+              r.activation, r.in_step, (${disconnectedInstallation}) AS disconnected,
+              r.drift, r.unmanaged, r.names,
+              r.applied_revision, r.locked_revision, r.observed_at, greatest(r.observed_at, r.last_seen_at) AS last_seen_at
        FROM nodrail.inventory_reports r
        JOIN nodrail.users u ON u.id = r.user_id
+       LEFT JOIN nodrail.installations i ON i.workspace_id = r.workspace_id
+         AND i.environment_id = r.environment_id AND i.enrollment_project_id = r.project_id
+         AND i.enrollment_machine_id = r.machine::uuid
        WHERE r.workspace_id = $1 AND r.environment_id = $2 AND ($3 OR r.user_id = $4)
        ORDER BY r.project, u.display_name, r.machine, r.host
        LIMIT 1000`,
@@ -89,15 +96,15 @@ export async function listInventory(
     projectBound: row.project_id !== null,
     host: row.host,
     agent: row.agent,
-    activation: row.activation,
-    inStep: row.in_step,
+    activation: row.disconnected ? "disconnected" : row.activation,
+    inStep: !row.disconnected && row.in_step,
     drift: row.drift,
     unmanaged: row.unmanaged,
     names: row.names,
     appliedRevision: row.applied_revision,
     lockedRevision: row.locked_revision,
     observedAt: row.observed_at.toISOString(),
-    stale: now - row.observed_at.getTime() > INVENTORY_STALE_MS,
+    stale: now - row.last_seen_at.getTime() > INVENTORY_STALE_MS,
     ...behind(
       // An unbound report is never compared with anyone's intended revision.
       (row.project_id && intended.get(row.project_id)?.revision) ?? null,
@@ -110,7 +117,11 @@ export async function listInventory(
     summary: {
       reports: list.length,
       ...activationCounts(list.filter((row) => !row.stale)),
-      stale: list.filter((row) => row.stale).length,
+      disconnected: list.filter((row) => row.activation === "disconnected")
+        .length,
+      stale: list.filter(
+        (row) => row.stale && row.activation !== "disconnected",
+      ).length,
       drifted: list.filter((row) => row.drift > 0).length,
       behind: list.filter((row) => row.behind).length,
     },

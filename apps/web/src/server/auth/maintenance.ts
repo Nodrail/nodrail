@@ -3,6 +3,9 @@ import { asAuthenticator } from "@/server/db/context";
 
 export function pruneLoginState() {
   return asAuthenticator(async (manager) => {
+    await manager.query(
+      "DELETE FROM nodrail.cli_login_requests WHERE expires_at <= statement_timestamp()",
+    );
     const [, links]: [unknown, number] = await manager.query(
       "DELETE FROM nodrail.login_links WHERE expires_at <= statement_timestamp()",
     );

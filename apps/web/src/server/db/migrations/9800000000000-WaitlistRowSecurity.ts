@@ -11,6 +11,7 @@ export class WaitlistRowSecurity9800000000000 implements MigrationInterface {
   async up(queryRunner: QueryRunner) {
     const run = (sql: string) => queryRunner.query(sql);
     for (const table of tables) {
+      if (!(await queryRunner.hasTable(`public.${table}`))) continue;
       await run(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY`);
       await run(`
         CREATE POLICY server_only ON public.${table}
@@ -25,6 +26,7 @@ export class WaitlistRowSecurity9800000000000 implements MigrationInterface {
   async down(queryRunner: QueryRunner) {
     const run = (sql: string) => queryRunner.query(sql);
     for (const table of tables) {
+      if (!(await queryRunner.hasTable(`public.${table}`))) continue;
       await run(`REVOKE ALL ON public.${table} FROM nodrail_app`);
       await run(`DROP POLICY server_only ON public.${table}`);
       await run(`ALTER TABLE public.${table} DISABLE ROW LEVEL SECURITY`);

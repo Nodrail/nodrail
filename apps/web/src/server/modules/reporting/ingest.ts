@@ -198,7 +198,15 @@ async function keepSpan(
   }
   if (span.name === "nodrail.observation") {
     const report = toReport(where.project, span, now);
-    if (report) await keepObservation(context, where.environmentId, report);
+    if (report)
+      await keepObservation(
+        context,
+        {
+          environmentId: where.environmentId,
+          userId: context.principal.userId,
+        },
+        report,
+      );
     return report !== null;
   }
   const event =

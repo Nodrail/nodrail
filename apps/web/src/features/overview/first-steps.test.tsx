@@ -37,7 +37,7 @@ function renderSteps(
       <FirstSteps
         base="/app/acme/development"
         workspaceBase="/app/acme"
-        workspaceId={workspaceId}
+        environmentId={workspaceId}
         steps={current}
         checkedIn={checkedIn}
       />
@@ -61,19 +61,18 @@ beforeEach(() => {
 describe("first steps", () => {
   test("a new workspace starts at connecting an agent, with no way to hide them", () => {
     renderSteps(none, { checkedIn: false });
-    expect(screen.getByText("0 of 4 done")).toBeVisible();
+    expect(screen.getByText("0 of 3 done")).toBeVisible();
     expect(step("agent")).toHaveAttribute("aria-current", "step");
     expect(
-      within(step("agent")).getByRole("link", { name: "Connect an agent" }),
+      within(step("agent")).getByRole("link", { name: "Connect a project" }),
     ).toHaveAttribute("href", "/app/acme/development/agents/connect");
     expect(within(step("rule")).getByRole("link")).toHaveAttribute(
       "href",
       "/app/acme/development/policies",
     );
-    expect(within(step("teammate")).getByRole("link")).toHaveAttribute(
-      "href",
-      "/app/acme/settings/members",
-    );
+    expect(
+      screen.getByRole("link", { name: "Invite a teammate" }),
+    ).toHaveAttribute("href", "/app/acme/settings/members");
     // Setting up is optional: the list can be hidden before any step is done.
     expect(
       screen.getByRole("button", { name: "Hide these steps" }),
@@ -84,7 +83,7 @@ describe("first steps", () => {
   test("tick themselves from the data, and report each step once", () => {
     const { rerender } = renderSteps(none);
     rerender({ ...none, agent: true });
-    expect(screen.getByText("1 of 4 done")).toBeVisible();
+    expect(screen.getByText("1 of 3 done")).toBeVisible();
     expect(step("agent")).toHaveAttribute("data-done");
     expect(step("rule")).toHaveAttribute("aria-current", "step");
     expect(mocks.track).toHaveBeenCalledWith("checklist_item_done", {
@@ -92,10 +91,10 @@ describe("first steps", () => {
     });
 
     rerender({ ...none, agent: true, rule: true });
-    expect(screen.getByText("2 of 4 done")).toBeVisible();
+    expect(screen.getByText("2 of 3 done")).toBeVisible();
     expect(screen.getByRole("progressbar")).toHaveAttribute(
       "aria-valuenow",
-      "50",
+      String((2 / 3) * 100),
     );
     expect(
       mocks.track.mock.calls.filter(([, props]) => props.item === "agent"),
@@ -130,7 +129,7 @@ describe("first steps", () => {
     );
     expect(document.querySelector("[data-slot=first-steps]")).toBeNull();
     expect(mocks.mark).toHaveBeenCalledWith({
-      key: `checklist:${workspaceId}`,
+      key: `checklist-env:${workspaceId}`,
       value: null,
     });
     expect(mocks.refresh).toHaveBeenCalled();
@@ -139,7 +138,7 @@ describe("first steps", () => {
   test("stay hidden once set aside", () => {
     renderSteps(
       { ...none, agent: true },
-      { initial: { [`checklist:${workspaceId}`]: null } },
+      { initial: { [`checklist-env:${workspaceId}`]: null } },
     );
     expect(document.querySelector("[data-slot=first-steps]")).toBeNull();
   });

@@ -4,6 +4,7 @@ import { asAuthenticator } from "@/server/db/context";
 import { tokenDigest } from "./token";
 
 const limits = {
+  cli: { total: 300, perSource: 30, perAddress: 5, window: 300 },
   password: { total: 120, perSource: 20, perAddress: 10, window: 900 },
   email: { total: 300, perSource: 30, perAddress: 5, window: 900 },
   redeem: { total: 300, perSource: 30, perAddress: 10, window: 900 },

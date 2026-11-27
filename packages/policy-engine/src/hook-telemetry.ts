@@ -12,12 +12,8 @@ import {
 } from "./telemetry.ts";
 import { telemetryFile } from "./telemetry-schema.ts";
 import type { SpanRecord } from "./otlp.ts";
-import {
-  machineId,
-  policyRevision,
-  runEventSpan,
-  runRef,
-} from "./reporting-spans.ts";
+import { telemetryId } from "./machine-id.ts";
+import { policyRevision, runEventSpan, runRef } from "./reporting-spans.ts";
 import type { RunEvent } from "./runs.ts";
 
 /** What the hook hands its observer once a call is judged. */
@@ -25,6 +21,9 @@ export type Observed = {
   judged: Judged;
   event: Record<string, unknown> | null;
   agent: string | null;
+  watch?: boolean;
+  pausedAgents?: string[];
+  admission?: { id: string; call: string };
   /** The run's ledger key and the step, when the rules keep a ledger. */
   run?: string | null;
   step?: string | null;
@@ -54,6 +53,11 @@ export function told(judged: Judged) {
   } catch {
     return "deny";
   }
+}
+
+export function reportedVerdict({ judged, watch }: Observed) {
+  const verdict = told(judged);
+  return watch && verdict === "deny" ? "would_deny" : verdict;
 }
 
 export type HookReporting = {
@@ -90,7 +94,7 @@ export function telemetryObserver(input: HookReporting): Reporter | null {
     return null;
   }
   try {
-    machine = machineId(input.home ?? homedir());
+    machine = telemetryId(input.home ?? homedir());
   } catch (error) {
     input.warn(
       `Nodrail: telemetry is off: can't keep this machine's id in ~/.nodrail: ${(error as Error).message}\n`,
@@ -112,14 +116,15 @@ export function telemetryObserver(input: HookReporting): Reporter | null {
     }
   };
   return {
-    observe: ({ judged, event, agent, run, step }) =>
+    observe: (observed) => {
+      const { judged, event, agent, run, step } = observed;
       queue(
         decisionSpan({
           event,
           host: input.host,
           agent,
           action: judged.action,
-          decision: told(judged),
+          decision: reportedVerdict(observed),
           matched: judged.decision?.outcome ?? null,
           rule: judged.decision?.matchedRuleId ?? null,
           revision,
@@ -130,7 +135,8 @@ export function telemetryObserver(input: HookReporting): Reporter | null {
           started,
           ended: now(),
         }),
-      ),
+      );
+    },
     report: (run, event) =>
       queue(runEventSpan({ run, event, host: input.host, machine })),
   };

@@ -21,8 +21,12 @@ const change = (label: string): Entry => ({
 });
 
 /** Every audited code. Recording an unlisted one does not compile. */
+export const lateHostReport = "reported late (unverified)";
+
 export const activityCatalog = {
+  host_reported_late: change(lateHostReport),
   allowed_by_rule: decision("allowed", "Allowed by rule"),
+  would_deny: decision("allowed", "Would deny"),
   denied_by_rule: decision("denied", "Denied by rule"),
   denied_agent_paused: decision("denied", "Denied · agent paused"),
   // No rule covers the call: denied, so a person can add a rule if it should run.
@@ -31,7 +35,7 @@ export const activityCatalog = {
   rule_update: change("Rule updated"),
   rule_revoke: change("Rule revoked"),
   rules_applied: change("Rules applied from YAML"),
-  agent_connected: change("Agent connected"),
+  agent_connected: change("Agent registered"),
   agent_paused: change("Agent paused"),
   agent_resumed: change("Agent resumed"),
   credential_rotated: change("Credential rotated"),
@@ -142,7 +146,10 @@ export type ActivityDetailDto = ActivityEventDto & {
 };
 
 export type AgentCountsDto = {
+  /** Connected installations in this environment. */
   connected: number;
+  /** Connected installations with a recent check-in. */
   reporting: number;
+  /** Visible agent and machine identities whose own access is paused. */
   paused: number;
 };

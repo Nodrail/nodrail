@@ -72,6 +72,7 @@ const actionRow = z.object({
   initial_evaluation: z.custom<RunActionDto["evaluation"]>(),
   run_hold: z.custom<RunHoldDto>().nullable(),
   event_id: z.uuid().nullable(),
+  pause_denial: z.string().nullable(),
   action_digest: z.string(),
   decided_on_host: z.boolean(),
   policy_digest: z.string().nullable(),
@@ -82,20 +83,27 @@ async function loadActions(context: WorkspaceContext, runId: string) {
   const rows = parseRows(
     actionRow,
     await context.manager.query(
-      `SELECT ar.id, ar.run_seq::text, ar.created_at, ar.step_key, s.agent, ar.tool_key,
+      `SELECT ar.id, ar.run_seq::text, ar.created_at, ar.step_key,
+              CASE WHEN i.enrollment_project_id IS NOT NULL THEN a.external_key ELSE s.agent END AS agent,
+              ar.tool_key,
               ar.operation_key, ar.resource_id, ar.initial_evaluation,
               ar.run_hold, ar.action_digest, ar.policy_digest, ar.policy_skew,
               ar.decided_by = 'host' AS decided_on_host,
               -- Its event in Activity: the latest decision recorded about it.
-              (SELECT e.id FROM nodrail.audit_events e
-               WHERE e.workspace_id = ar.workspace_id
-                 AND e.action_request_id = ar.id
-               ORDER BY e.occurred_at DESC, e.id DESC
-               LIMIT 1) AS event_id
+              event.id AS event_id,
+              CASE WHEN event.decision_code = 'denied_agent_paused'
+                THEN event.payload_safe->>'detail' END AS pause_denial
        FROM nodrail.action_requests ar
+       JOIN nodrail.installations i ON i.workspace_id = ar.workspace_id AND i.id = ar.installation_id
+       JOIN nodrail.agents a ON a.workspace_id = ar.workspace_id AND a.id = ar.agent_id
        LEFT JOIN nodrail.run_steps s
          ON s.workspace_id = ar.workspace_id AND s.run_id = ar.run_id
         AND s.step_key = ar.step_key
+       LEFT JOIN LATERAL (
+         SELECT e.id, e.decision_code, e.payload_safe FROM nodrail.audit_events e
+         WHERE e.workspace_id = ar.workspace_id AND e.action_request_id = ar.id
+         ORDER BY e.occurred_at DESC, e.id DESC LIMIT 1
+       ) event ON true
        WHERE ar.workspace_id = $1 AND ar.run_id = $2
        ORDER BY ar.run_seq DESC
        LIMIT ${TIMELINE_LIMIT}`,
@@ -119,6 +127,7 @@ function toAction(row: z.infer<typeof actionRow>): RunActionDto {
     operationKey: row.operation_key,
     resource: row.resource_id,
     evaluation: row.initial_evaluation,
+    ...(row.pause_denial ? { pauseDenial: row.pause_denial } : {}),
     hold: row.run_hold,
     eventId: row.event_id,
     ...decidedOnHost(row),

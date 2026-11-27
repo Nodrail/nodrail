@@ -31,6 +31,7 @@ import { useFormEntry, useImpact } from "../use-impact";
 import { useRows } from "../use-rows";
 import { Note } from "@/components/app/note";
 import { DecisionField } from "./decision-field";
+import { useRepositoryProject } from "./repository-policy";
 import { PublishPreview } from "./publish-preview";
 import { SaveFooter, publishLabel } from "./run-policy-save";
 import { TargetFields } from "./target-fields";
@@ -286,6 +287,7 @@ export function RuleForm({
 }) {
   const router = useRouter();
   const initial = rule ?? draft;
+  const project = useRepositoryProject();
   const [state, submit, pending] = useAppAction(action, () => {
     track(rule ? "rule_updated" : "rule_created");
     router.push(policiesPath);
@@ -319,6 +321,7 @@ export function RuleForm({
       onChange={entry.read}
       className="grid max-w-190 gap-3"
     >
+      <input type="hidden" name="reviewedProjectId" value={project?.id ?? ""} />
       <input type="hidden" name="conditions" value={conditions.serialized} />
       <DecisionCard initial={initial} />
       <ScopeCard
@@ -333,8 +336,7 @@ export function RuleForm({
       <ConditionsCard conditions={conditions} />
       <Note>
         <b>Scope matters.</b> Each covered call is checked against current
-        rules. If several match, an explicit deny takes precedence over review,
-        and review over allow.
+        rules. If several match, an explicit deny takes precedence over allow.
       </Note>
       {overlap ? (
         <Note tone="warning" role="status">

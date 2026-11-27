@@ -32,16 +32,19 @@ const nextOptions = {
   path: "/",
 } as const;
 
-async function loginAllowed(
+async function loginAvailability(
   kind: Parameters<typeof allowAttempt>[0],
   subject: string,
 ) {
   const source = await loginSource();
-  return source !== null && (await allowAttempt(kind, source, subject));
+  if (source === null) return "proxy" as const;
+  return (await allowAttempt(kind, source, subject))
+    ? null
+    : ("retry" as const);
 }
 
 export type SignInState = {
-  status: "idle" | "sent" | "invalid" | "unavailable" | "retry";
+  status: "idle" | "sent" | "invalid" | "unavailable" | "retry" | "proxy";
 };
 
 export async function requestSignInLink(
@@ -55,7 +58,8 @@ export async function requestSignInLink(
   const method = data.get("method");
   const kind =
     method === "reset" ? "reset" : method === "verify" ? "verify" : "sign-in";
-  if (!(await loginAllowed("email", email.data))) return { status: "retry" };
+  const blocked = await loginAvailability("email", email.data);
+  if (blocked) return { status: blocked };
   after(async () => {
     try {
       await deliverLoginLink(email.data, kind, canCreateAccount(email.data));
@@ -70,7 +74,7 @@ export async function requestSignInLink(
   return { status: "sent" };
 }
 
-export type PasswordState = { status: "idle" | "failed" | "retry" };
+export type PasswordState = { status: "idle" | "failed" | "retry" | "proxy" };
 
 export async function signInWithPassword(
   _previous: PasswordState,
@@ -79,7 +83,8 @@ export async function signInWithPassword(
   const email = loginEmail.safeParse(data.get("email"));
   const password = newPassword.safeParse(data.get("password"));
   if (!email.success || !password.success) return { status: "failed" };
-  if (!(await loginAllowed("password", email.data))) return { status: "retry" };
+  const blocked = await loginAvailability("password", email.data);
+  if (blocked) return { status: blocked };
   const previous = await currentSessionToken();
   const session = await withPasswordWork(() =>
     passwordSignIn(email.data, password.data, previous),
@@ -90,7 +95,9 @@ export async function signInWithPassword(
   redirect(safeNextPath(data.get("next")));
 }
 
-export type ConfirmState = { status: "idle" | "failed" | "retry" | "password" };
+export type ConfirmState = {
+  status: "idle" | "failed" | "retry" | "proxy" | "password";
+};
 
 /** A POST, so a mail scanner that fetches the link cannot use it up. */
 export async function confirmSignIn(
@@ -105,7 +112,8 @@ export async function confirmSignIn(
     : undefined;
   if (password && !password.success) return { status: "password" };
 
-  if (!(await loginAllowed("redeem", token))) return { status: "retry" };
+  const blocked = await loginAvailability("redeem", token);
+  if (blocked) return { status: blocked };
   const previous = await currentSessionToken();
   const redeem = () =>
     redeemLoginLink(token, {

@@ -29,7 +29,7 @@ export const pilotSql = `
     ${minutesSince("w.created_at", "actions.first_at")}
       AS minutes_to_first_decision,
     EXISTS (SELECT 1 FROM nodrail.action_requests ar
-            WHERE ar.workspace_id = w.id
+            WHERE ar.workspace_id = w.id AND ar.access_epoch > 0
               AND ar.created_at >= w.created_at + interval '7 days'
               AND ar.created_at < w.created_at + interval '14 days')
       AS active_second_week,
@@ -43,7 +43,7 @@ export const pilotSql = `
     SELECT min(ar.created_at) AS first_at, count(*)::int AS intents,
            sum(ar.attempt_count - 1)::int AS retries,
            count(*) FILTER (WHERE ar.initial_evaluation = 'denied')::int AS denied
-    FROM nodrail.action_requests ar WHERE ar.workspace_id = w.id
+    FROM nodrail.action_requests ar WHERE ar.workspace_id = w.id AND ar.access_epoch > 0
   ) actions ON true
   LEFT JOIN LATERAL (
     SELECT count(*) FILTER (WHERE o.state = 'delivered')::int AS sent,

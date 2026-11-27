@@ -8,6 +8,7 @@ import * as tokenTables from "./token-entities";
 import * as inventoryTables from "./inventory-entities";
 import * as reportingTables from "./reporting-entities";
 import * as contractTables from "./contract-entities";
+import * as enrollmentTables from "./enrollment-entities";
 import * as evidenceTables from "./evidence-entities";
 import * as budgetTables from "./budget-entities";
 import * as notificationTables from "./notification-entities";
@@ -53,6 +54,7 @@ const entities = [
   ...named(reportingTables),
   ...named(contractTables),
   ...named(evidenceTables),
+  ...named(enrollmentTables),
   ...named(budgetTables),
   ...named(opsTables),
   ...named(notificationTables),

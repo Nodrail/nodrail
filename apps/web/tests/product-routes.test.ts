@@ -42,10 +42,9 @@ const rootFiles = (dir: string) =>
 
 // The standalone server checks the public route list against its own files.
 // In a checkout with the website, verify the website files against it too.
-const siteSegments = () =>
-  workspace.name === "nodrail-server" ? [...siteTopLevel] : segments(siteDir);
-const siteRootFiles = () =>
-  workspace.name === "nodrail-server" ? [] : rootFiles(siteDir);
+const hasSite = Object.hasOwn(workspace.scripts, "dev:site");
+const siteSegments = () => (hasSite ? segments(siteDir) : [...siteTopLevel]);
+const siteRootFiles = () => (hasSite ? rootFiles(siteDir) : []);
 const allSegments = () => [...segments(appDir), ...siteSegments()];
 
 describe("the top-level routes the app host must not rewrite", () => {

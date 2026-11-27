@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/features/shell/components/page-header";
 import { timeAgo } from "@/lib/time";
 import type { AgentPage } from "../load";
-import { accessBadge, reportingBadge } from "../presentation";
+import { accessBadge, agentProject, reportingBadge } from "../presentation";
 import { AccessControl } from "./access-control";
 import { AgentAvatar } from "./agent-avatar";
 
@@ -35,15 +35,20 @@ export function AgentHeader({
   current: AgentTab;
 }) {
   const paused = agent.access.status === "paused";
-  const reporting = installation
-    ? reportingBadge[installation.reporting]
-    : null;
+  const fallback = installation?.machineKey === agent.key;
+  const reporting = installation?.disconnected
+    ? ({ tone: "neutral", label: "Disconnected" } as const)
+    : installation
+      ? reportingBadge[installation.reporting]
+      : null;
   const agentPath = `${base}/agents/${agent.key}`;
   return (
     <>
       <PageHeader
-        title={agent.key}
-        purpose={[agent.description, environmentName]
+        title={
+          fallback ? `Unidentified callers on ${installation.name}` : agent.key
+        }
+        purpose={[agent.description, agentProject(agent), environmentName]
           .filter(Boolean)
           .join(" · ")}
         back={{ href: `${base}/agents`, label: "Back to agents" }}
@@ -62,7 +67,7 @@ export function AgentHeader({
         }
         action={
           agent.canManage && paused ? (
-            <AccessControl workspace={workspace} agent={agent} />
+            <AccessControl workspace={workspace} base={base} agent={agent} />
           ) : null
         }
       />
@@ -93,20 +98,30 @@ export function AgentNotConnected({
 }: {
   page: AgentPage;
 }) {
+  const project = agentProject(agent);
+  const setup = `${base}/agents/connect`;
   return (
     <EmptyState
       title={`Not connected in ${environmentName}`}
       action={
         agent.canManage ? (
           <Button asChild variant="outline">
-            <Link href={`${base}/agents/connect?agent=${agent.key}`}>
-              Connect in {environmentName}
+            <Link
+              href={
+                project
+                  ? setup
+                  : `${setup}?agent=${encodeURIComponent(agent.key)}`
+              }
+            >
+              Open setup in {environmentName}
             </Link>
           </Button>
         ) : null
       }
     >
-      This agent has no installation in this environment.
+      {project
+        ? "Run nodrail apply from the agent’s repository to enroll a host in this environment."
+        : "This agent has no installation in this environment."}
     </EmptyState>
   );
 }

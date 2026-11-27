@@ -12,21 +12,11 @@ const PLUGINS = "Nodrail/agent-plugins";
 export const claudeCodePluginSnippet = `/plugin marketplace add ${PLUGINS}
 /plugin install nodrail@nodrail`;
 
-export const codexPluginSnippet = (serverUrl: string) =>
-  `codex plugin marketplace add ${PLUGINS}
-codex plugin add nodrail@nodrail
-
-# Save the credential once, for every Codex session on this machine.
-# Paste it, press Enter, then Ctrl-D. It stays out of your shell history.
-mkdir -p ~/.nodrail && (umask 077; cat > ~/.nodrail/credential)
-${serverUrl === "https://app.nodrail.com" ? "" : `export NODRAIL_URL="${serverUrl}"\n`}
-# Then start Codex and trust the Nodrail hooks in /hooks.`;
-
 export const environmentSnippet = (serverUrl: string) =>
   `export NODRAIL_URL="${serverUrl}"\nexport NODRAIL_CREDENTIAL="<the credential above>"`;
 
 export const sdkEnvironmentSnippet = (serverUrl: string) =>
-  `${serverUrl === "https://app.nodrail.com" ? "" : `NODRAIL_URL="${serverUrl}"\n`}NODRAIL_CREDENTIAL="<the credential above>"`;
+  `NODRAIL_URL="${serverUrl}"\nNODRAIL_CREDENTIAL="<the credential above>"`;
 
 export const frameworkSnippet = `import { guard } from "@nodrail/client";
 
@@ -52,23 +42,30 @@ await nodrail.run(
   () => createIssue(title),
 );`;
 
-const CLOUD_URL = "https://app.nodrail.com";
-
-/** Where a project's nodrail.yaml points its hosts: this control plane. */
 export type ConnectPlace = { workspace: string; environment: string };
 
-/** The `connect:` block for nodrail.yaml, for this workspace and environment. */
+export const projectRuntimes = [
+  { key: "claude-code", label: "Claude Code", command: "claude" },
+  { key: "codex", label: "Codex", command: "codex" },
+  { key: "copilot", label: "GitHub Copilot CLI", command: "copilot" },
+] as const;
+
+export type ProjectRuntime = (typeof projectRuntimes)[number]["key"];
+
+export const connectCommand = (
+  serverUrl: string,
+  place: ConnectPlace,
+  runtime: ProjectRuntime,
+) =>
+  `nodrail connect ${serverUrl} --workspace ${place.workspace} --environment ${place.environment} --runtime ${runtime}`;
+
 export const connectSnippet = (serverUrl: string, place: ConnectPlace) =>
   `connect:
-${serverUrl === CLOUD_URL ? "" : `  url: ${serverUrl}\n`}  workspace: ${place.workspace}
+  url: ${serverUrl}
+  workspace: ${place.workspace}
   environment: ${place.environment}
   decide: cloud
-  enforce: on
-  credential: { fromEnv: NODRAIL_CREDENTIAL }`;
+  enforce: on`;
 
-/** Plan and apply from the project, with the agent's credential set. */
-export const applySnippet = (serverUrl: string) =>
-  `export NODRAIL_CREDENTIAL="<the credential above>"
-nodrail login${serverUrl === CLOUD_URL ? "" : ` --url ${serverUrl}`}   # your own token, to publish the policy
-nodrail plan
-nodrail apply`;
+export const applySnippet = (runtime: ProjectRuntime) =>
+  `nodrail apply --runtime ${runtime}`;

@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { environmentCookie } from "@/features/shell/environment-preference";
 import { notFound } from "next/navigation";
 import { WorkspaceFrame } from "@/features/shell/components/workspace-frame";
 import {
@@ -7,14 +9,17 @@ import {
 
 /**
  * Workspace settings and your account are in no environment: the sidebar's
- * links lead to the workspace's default one.
+ * links lead to the last environment used in this workspace.
  */
 export default async function ManageFrameLayout({
   children,
   params,
 }: LayoutProps<"/app/[workspace]">) {
   const view = await loadWorkspaceView((await params).workspace);
-  const environment = defaultEnvironment(view);
+  const preferred = (await cookies()).get(environmentCookie(view.slug))?.value;
+  const environment =
+    view.environments.find((item) => item.slug === preferred) ??
+    defaultEnvironment(view);
   if (!environment) notFound();
   return (
     <WorkspaceFrame view={view} environment={environment.slug}>

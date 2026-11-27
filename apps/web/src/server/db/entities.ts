@@ -236,6 +236,8 @@ export class PolicyVersion {
   @OptionalText() managedRevision!: string | null;
   /** That lock's effective policy digest. */
   @OptionalText() managedPolicyRevision!: string | null;
+  @Column({ type: "text", array: true, nullable: true }) managedAgentKeys!:
+    string[] | null;
   /** The file it was published from, and its SHA-256; null when made on screen. */
   @OptionalText() sourceText!: string | null;
   @OptionalText() sourceDigest!: string | null;
@@ -252,6 +254,25 @@ export class ActivePolicy {
   @PrimaryColumn({ type: "uuid" }) environmentId!: string;
   @Uuid() policyVersionId!: string;
   @Clock() activatedAt!: Date;
+  @Fk(() => PolicyVersion, {
+    workspace_id: "workspaceId",
+    environment_id: "environmentId",
+    policy_version_id: "id",
+  })
+  policyVersion!: Relation<PolicyVersion>;
+}
+
+/** Reviewed workspace locks that reused a published policy version. */
+@Entity({ schema, name: "policy_workspace_locks" })
+@Check(
+  "policy_workspace_locks_digest",
+  `"workspace_revision" ~ '^[0-9a-f]{64}$'`,
+)
+export class PolicyWorkspaceLock {
+  @PrimaryColumn({ type: "uuid" }) workspaceId!: string;
+  @PrimaryColumn({ type: "uuid" }) environmentId!: string;
+  @PrimaryColumn({ type: "uuid" }) policyVersionId!: string;
+  @PrimaryColumn({ type: "text" }) workspaceRevision!: string;
   @Fk(() => PolicyVersion, {
     workspace_id: "workspaceId",
     environment_id: "environmentId",
@@ -278,6 +299,7 @@ export class Agent {
   @Id() id!: string;
   @Uuid() workspaceId!: string;
   @Text() externalKey!: string;
+  @OptionalUuid() managedProjectId!: string | null;
   @OptionalText() description!: string | null;
   @Text({ default: "active" }) accessStatus!: "active" | "paused";
   @Int({ default: 1 }) accessEpoch!: number;
@@ -288,6 +310,15 @@ export class Agent {
   @Fk(() => Workspace, { workspace_id: "id" }) workspace!: Relation<Workspace>;
   @Fk(() => WorkspaceMembership, member("paused_by"), { nullable: true })
   pauser!: Relation<WorkspaceMembership> | null;
+}
+
+@Entity({ schema, name: "enrolled_projects" })
+export class EnrolledProject {
+  @PrimaryColumn({ type: "uuid" }) workspaceId!: string;
+  @PrimaryColumn({ type: "uuid" }) projectId!: string;
+  @Uuid() ownerId!: string;
+  @Column({ type: "uuid", array: true, default: "{}" }) applyUserIds!: string[];
+  @Fk(() => Workspace, { workspace_id: "id" }) workspace!: Relation<Workspace>;
 }
 
 /** Who an agent belongs to, for the per-person view. */
@@ -307,10 +338,21 @@ export class AgentMember {
 @Unique(["workspaceId", "name"])
 @Unique(["workspaceId", "id"])
 @Unique(["workspaceId", "id", "agentId", "environmentId"])
+@Unique(["workspaceId", "id", "environmentId"])
 @Index(
   "installations_one_live_per_environment",
   ["workspaceId", "agentId", "environmentId"],
   { unique: true, where: `"archived_at" IS NULL` },
+)
+@Index(
+  "installations_machine_project",
+  [
+    "workspaceId",
+    "environmentId",
+    "enrollmentProjectId",
+    "enrollmentMachineId",
+  ],
+  { unique: true, where: `"enrollment_project_id" IS NOT NULL` },
 )
 @Index("installations_agent", ["workspaceId", "agentId"])
 @Index("installations_environment", ["workspaceId", "environmentId"])
@@ -331,6 +373,17 @@ export class Installation {
   @Uuid() agentId!: string;
   @Uuid() environmentId!: string;
   @Text() name!: string;
+  @Text({
+    default: () => "concat(gen_random_uuid(), gen_random_uuid())",
+    select: false,
+  })
+  admissionKey!: string;
+  @OptionalUuid() enrollmentProjectId!: string | null;
+  @OptionalUuid() enrollmentMachineId!: string | null;
+  @OptionalUuid() enrollmentOwnerId!: string | null;
+  @OptionalTime() enrollmentDisabledAt!: Date | null;
+  @Column({ type: "text", array: true, nullable: true }) enrollmentAgentKeys!:
+    string[] | null;
   @Text() adapterKey!: string;
   @OptionalText() adapterVersion!: string | null;
   @Text({ default: "unverified" }) compatibility!: "unverified" | "verified";
@@ -478,6 +531,7 @@ export class ActionRequest {
   @Json("{}") paramsSafe!: object;
   @Text() permissionFingerprint!: string;
   @Text() descriptorDigest!: string;
+  @OptionalText() pauseReplayDigest!: string | null;
   @Text() actionDigest!: string;
   @Uuid() initialPolicyVersionId!: string;
   @Int() accessEpoch!: number;
@@ -506,10 +560,10 @@ export class ActionRequest {
   @Fk(() => Installation, {
     workspace_id: "workspaceId",
     installation_id: "id",
-    agent_id: "agentId",
     environment_id: "environmentId",
   })
   installation!: Relation<Installation>;
+  @Fk(() => Agent, inWorkspace("agent_id")) agent!: Relation<Agent>;
   @Fk(() => PolicyVersion, {
     workspace_id: "workspaceId",
     environment_id: "environmentId",

@@ -10,9 +10,22 @@ import { MAX_RECEIPT_TEXT } from "../receipt-block.ts";
 const SCAN = 16 * 1024;
 
 /** `key: value`, optionally bulleted; keys are bare lowercase words. */
-const ENTRY = /^\s*(?:[-*]\s+)?([a-z][a-z0-9_-]*):\s*(.*)$/;
-/** A line with a colon whose head is no bare key: consumed, not captured. */
-const UNKNOWN = /^\s*(?:[-*]\s+)?[^\n]*:.*$/;
+const ENTRY = /^([a-z][a-z0-9_-]*):/;
+const LINE_BREAK = /[\r\n\u2028\u2029]/;
+
+function readEntry(line: string): [string, string] | null {
+  const content = line.trimStart().replace(BULLET_MARK, "");
+  const head = ENTRY.exec(content);
+  if (!head) return null;
+  const value = content.slice(head[0].length).trimStart();
+  return LINE_BREAK.test(value) ? null : [head[1]!, value.trimEnd()];
+}
+
+/** A colon line is consumed even when its key cannot be captured. */
+function hasColon(line: string) {
+  const colon = line.lastIndexOf(":");
+  return colon !== -1 && !LINE_BREAK.test(line.slice(colon + 1));
+}
 /** A colon-less bullet, continuing a key whose value was left empty. */
 const BULLET = /^\s*[-*]\s+\S/;
 const BULLET_MARK = /^\s*[-*]\s+/;
@@ -114,13 +127,12 @@ function consume(line: string, index: number, next: string, scan: Scan) {
   if (FENCE.test(line)) return true;
   if (!line.trim())
     // A blank line ends the block unless a key line follows it.
-    return ENTRY.test(next) || UNKNOWN.test(next) || FENCE.test(next);
-  const entry = ENTRY.exec(line);
+    return readEntry(next) !== null || hasColon(next) || FENCE.test(next);
+  const entry = readEntry(line);
   if (entry) {
-    const value = entry[2]!.trim();
-    scan.entries.push([entry[1]!, value]);
-    scan.open = value ? null : scan.entries.length - 1;
-  } else if (UNKNOWN.test(line)) scan.open = null;
+    scan.entries.push(entry);
+    scan.open = entry[1] ? null : scan.entries.length - 1;
+  } else if (hasColon(line)) scan.open = null;
   else if (scan.open !== null && BULLET.test(line)) {
     const held = scan.entries[scan.open]!;
     const item = line.replace(BULLET_MARK, "").trim();

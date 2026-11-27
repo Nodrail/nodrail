@@ -106,6 +106,7 @@ function action(
   return {
     id: `action-${counter}`,
     runId,
+    decidedBy: "server",
     at: at(minute),
     agent: "main",
     descriptor: {

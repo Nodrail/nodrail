@@ -261,7 +261,8 @@ export async function runEvents(
          UNION ALL
          -- A change counts once it went ahead: once it was given its permit,
          -- or, decided on its host, once the host allowed it.
-         SELECT 'action', ar.run_seq, ar.created_at, ar.step_key, s.agent, NULL,
+         SELECT 'action', ar.run_seq, ar.created_at, ar.step_key,
+                CASE WHEN to_jsonb(i)->>'enrollment_project_id' IS NULL THEN s.agent ELSE a.external_key END, NULL,
                 NULL, ar.tool_key, ar.operation_key, ar.initial_evaluation,
                 ar.run_change AND (
                   (ar.decided_by = 'host' AND ar.initial_evaluation = 'ready')
@@ -270,10 +271,12 @@ export async function runEvents(
                     WHERE p.workspace_id = ar.workspace_id
                       AND p.action_request_id = ar.id))
          FROM nodrail.action_requests ar
+         JOIN nodrail.installations i ON i.workspace_id = ar.workspace_id AND i.id = ar.installation_id
+         JOIN nodrail.agents a ON a.workspace_id = ar.workspace_id AND a.id = ar.agent_id
          LEFT JOIN nodrail.run_steps s
            ON s.workspace_id = ar.workspace_id AND s.run_id = ar.run_id
           AND s.step_key = ar.step_key
-         WHERE ar.workspace_id = $1 AND ar.run_id = $2
+         WHERE ar.workspace_id = $1 AND ar.run_id = $2 AND ar.access_epoch <> 0
            AND ($3::uuid IS NULL OR ar.run_seq < (
              SELECT run_seq FROM nodrail.action_requests
              WHERE workspace_id = $1 AND id = $3))

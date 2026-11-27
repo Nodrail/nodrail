@@ -15,6 +15,7 @@ import {
   type WorkspaceContext,
 } from "@/server/db/context";
 import type { RuntimeContext } from "@/server/db/runtime-context";
+import { requirePolicyOwnership } from "@/server/modules/runtime/policy-revision";
 import { evidenceShortfall } from "@/server/modules/runs/requirements";
 
 /**
@@ -66,14 +67,20 @@ export async function runtimeEvidenceStatus(
 ): Promise<EvidenceStatusDto> {
   const query = parseInput(evidenceStatusQuery, rawQuery);
   if (query.environment !== undefined) throw new AppError("INVALID_INPUT");
-  return pinnedStatus(context, query, { id: context.environmentId });
+  await requirePolicyOwnership(context);
+  return pinnedStatus(context, query, {
+    id: context.environmentId,
+    projectId: context.enrollmentProjectId ?? null,
+  });
 }
 
 async function pinnedStatus(
   scope: { manager: EntityManager; workspaceId: string },
   query: EvidenceStatusQuery,
-  environment: { slug: string | null } | { id: string },
+  environment:
+    { slug: string | null } | { id: string; projectId: string | null },
 ): Promise<EvidenceStatusDto> {
+  const projectId = "projectId" in environment ? environment.projectId : null;
   const pins = parseRows(
     pinnedRow,
     await scope.manager.query(
@@ -92,6 +99,7 @@ async function pinnedStatus(
                SELECT e.id FROM nodrail.environments e
                WHERE e.workspace_id = r.workspace_id AND e.slug = $5))
          AND ($6::uuid IS NULL OR r.environment_id = $6)
+         AND ($7::uuid IS NULL OR r.project_id = $7)
        ORDER BY r.published_at`,
       [
         scope.workspaceId,
@@ -100,6 +108,7 @@ async function pinnedStatus(
         query.requirement,
         "slug" in environment ? environment.slug : null,
         "id" in environment ? environment.id : null,
+        projectId,
       ],
     ),
   );
@@ -116,6 +125,7 @@ async function pinnedStatus(
       where: pin.where,
       contractDigest: pin.contract_digest,
       verifiers: pin.verifiers,
+      projectScoped: projectId !== null,
     },
     query.subject,
   );

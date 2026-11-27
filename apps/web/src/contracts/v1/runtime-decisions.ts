@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { checkToken } from "./activity-query";
+import { lateHostReport } from "./activity";
 import { idempotencyKey, policyDigest, submitActionInput } from "./runtime";
 
 /**
@@ -13,13 +15,14 @@ export const MAX_HOST_DECISIONS = 100;
 export const MAX_HOST_REASON = 1000;
 
 /** What the host told the agent's runtime. */
-export const hostVerdict = z.enum(["allow", "deny"]);
+export const hostVerdict = z.enum(["allow", "deny", "would_deny"]);
 export type HostVerdict = z.infer<typeof hostVerdict>;
 
 /** The verdict as a row's `initial_evaluation`, as for Cloud's own rows. */
 export const evaluationOfVerdict = {
   allow: "ready",
   deny: "denied",
+  would_deny: "ready",
 } as const satisfies Record<HostVerdict, string>;
 
 /**
@@ -33,6 +36,16 @@ export const hostDecisionInput = submitActionInput
   .extend({
     idempotency_key: idempotencyKey,
     verdict: hostVerdict,
+    admission_id: z
+      .string()
+      .regex(/^(?:[A-Za-z0-9_-]{1,32}\.[1-9][0-9]{0,11}\.)?[A-Za-z0-9_-]{43}$/)
+      .optional(),
+    check_token: checkToken.optional(),
+    paused_agents: z
+      .array(z.string().min(1).max(128))
+      .min(1)
+      .max(201)
+      .optional(),
     rule: z
       .object({
         id: z.string().min(1).max(128),
@@ -45,7 +58,8 @@ export const hostDecisionInput = submitActionInput
     decided_at: z.iso.datetime({ offset: true }),
     policy_digest: policyDigest.nullable(),
   })
-  .strict();
+  .strict()
+  .refine(({ verdict, paused_agents }) => !paused_agents || verdict === "deny");
 export type HostDecisionInput = z.infer<typeof hostDecisionInput>;
 
 /** Each item is read on its own, so one bad item never refuses the rest. */
@@ -56,8 +70,21 @@ export const hostDecisionsInput = z
   .strict();
 
 /** Each item's answer, in order: its row, or why it wasn't recorded. */
-export type HostDecisionResult =
-  | { key: string; action_id: string }
-  | { key: string | null; error: { code: string } };
+export const hostDecisionsResult = z.object({
+  results: z.array(
+    z.union([
+      z.object({
+        key: z.string(),
+        action_id: z.uuid(),
+        status: z.literal(lateHostReport).optional(),
+      }),
+      z.object({
+        key: z.string().nullable(),
+        error: z.object({ code: z.string(), message: z.string().optional() }),
+      }),
+    ]),
+  ),
+});
 
-export type HostDecisionsDto = { results: HostDecisionResult[] };
+export type HostDecisionsDto = z.infer<typeof hostDecisionsResult>;
+export type HostDecisionResult = HostDecisionsDto["results"][number];

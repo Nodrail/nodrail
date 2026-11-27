@@ -2,7 +2,7 @@ import "server-only";
 import { actionDigest, type ActionDescriptor } from "@nodrail/client/protocol";
 import { REQUEST_TTL_MINUTES } from "@/contracts/v1/requests";
 import type { RunHoldDto } from "@/contracts/v1/runs";
-import { AppError, type RuntimeContext } from "@/server/db/context";
+import { type RuntimeContext } from "@/server/db/context";
 import { digestSecret } from "@/server/security/secrets";
 import { changeOf } from "@/server/modules/runs/change";
 import type { Place } from "@/server/modules/runs/history";
@@ -103,6 +103,7 @@ export type NewRequest = {
   adapterVersion: string | undefined;
   descriptor: ActionDescriptor;
   digest: string;
+  pauseReplayDigest?: string;
   policyVersionId: string;
   accessEpoch: number;
   evaluation: InitialEvaluation;
@@ -152,10 +153,10 @@ export async function insertRequest(
         action_digest, initial_policy_version_id, access_epoch,
         initial_evaluation, run_id, step_key, run_hold, run_change,
         decided_by, policy_digest, host_rule_id, host_rule_name, host_reason,
-        host_decided_at, body_digest, policy_skew, run_seq, expires_at)
+        host_decided_at, body_digest, policy_skew, pause_replay_digest, run_seq, expires_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13, $14,
              $15, $16, $17, $18, $19, $20, $21::jsonb, $22, $23, $24, $25, $26,
-             $27, $28::timestamptz, $29, $30,
+             $27, $28::timestamptz, $29, $30, $31,
              CASE WHEN $19::uuid IS NULL THEN NULL ELSE ${nextSeq} END,
              ${requestExpiry})
      ON CONFLICT (workspace_id, installation_id, idempotency_key) DO NOTHING
@@ -182,23 +183,10 @@ export async function insertRequest(
       place?.runId ?? null,
       place?.step?.id ?? null,
       request.hold ? JSON.stringify(request.hold) : null,
-      place ? changeOf(descriptor) : null,
+      place ? request.accessEpoch > 0 && changeOf(descriptor) : null,
       ...hostColumns(request.host),
+      request.pauseReplayDigest ?? null,
     ],
   );
   return inserted.length > 0;
-}
-
-export async function agentAccess(context: RuntimeContext) {
-  const [agent]: { access_status: string; access_epoch: number }[] =
-    await context.manager.query(
-      `SELECT access_status, access_epoch FROM nodrail.agents
-       WHERE workspace_id = $1 AND id = $2`,
-      [context.workspaceId, context.agentId],
-    );
-  if (!agent) throw new AppError("BUSY");
-  return {
-    paused: agent.access_status === "paused",
-    epoch: agent.access_epoch,
-  };
 }

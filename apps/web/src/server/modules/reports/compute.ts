@@ -37,6 +37,7 @@ export type ReportStep = {
 export type ReportAction = {
   id: string;
   runId: string;
+  decidedBy: "server" | "host";
   at: Date;
   /** The step's agent, or `main` outside any step. */
   agent: string;
@@ -382,15 +383,16 @@ function median(values: number[]) {
 
 function runsReport(
   input: ReportInput,
+  gateActions: ReportAction[],
   covered: (action: ReportAction) => boolean,
   spends: RunSpendDto[],
 ): RunsReportDto {
   const gateIds = new Set(input.gates.map((gate) => gate.id));
   const reached = new Set(
-    input.actions.filter(covered).map((action) => action.runId),
+    gateActions.filter(covered).map((action) => action.runId),
   );
   const heldIn = new Set(
-    input.actions
+    gateActions
       .filter(
         (action) => action.hold?.kind === "gate" && gateIds.has(action.hold.id),
       )
@@ -435,13 +437,16 @@ export function computeReport(raw: ReportInput): ReportDto {
   const covered = (action: ReportAction) =>
     input.gates.some((gate) => covers(gate, action));
   const spends = runSpends(input, rules);
+  const gateActions = input.actions.filter(
+    ({ decidedBy }) => decidedBy === "server",
+  );
   return {
-    gates: input.gates.map((gate) => gateReport(gate, input.actions)),
+    gates: input.gates.map((gate) => gateReport(gate, gateActions)),
     budgets: input.budgets.map((budget) =>
       budgetReport(budget, input.actions, input.runs),
     ),
     agents: agentReports(input.steps, input.actions, rules),
-    runs: runsReport(input, covered, spends),
+    runs: runsReport(input, gateActions, covered, spends),
     checks: checkReports(input.steps, rules),
     topRuns: topRuns(spends),
   };

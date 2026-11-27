@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AgentHeader } from "@/features/agents/components/agent-header";
 import { loadAgentPage } from "@/features/agents/load";
 import { RuleTable } from "@/features/policies/components/rule-table";
+import { EnvironmentRepositoryPolicy } from "@/features/policies/environment-repository-policy";
 import { loadRuleList } from "@/features/policies/load";
 import { plural } from "@/lib/text";
 
@@ -49,15 +50,20 @@ export default async function AgentRulesPage({ params }: Props) {
             </ListSummary>
             {newRule}
           </div>
-          <RuleTable
+          <EnvironmentRepositoryPolicy
             workspace={workspace}
             environment={environment}
-            rules={applying}
-            lastMatched={lastMatched}
-            agents={[]}
-            initialAgent=""
-            canManage={canManage}
-          />
+          >
+            <RuleTable
+              workspace={workspace}
+              environment={environment}
+              rules={applying}
+              lastMatched={lastMatched}
+              agents={[]}
+              initialAgent=""
+              canManage={canManage}
+            />
+          </EnvironmentRepositoryPolicy>
         </>
       )}
     </>

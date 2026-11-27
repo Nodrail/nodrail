@@ -6,12 +6,13 @@ import { FormField } from "@/components/app/form-field";
 import { SubmitButton } from "@/components/app/form-feedback";
 import { FieldError } from "@/components/app/note";
 import { signInWithPassword, type PasswordState } from "../actions";
-import { authForm, retryMessage } from "./auth-form";
+import { authForm, signInProblem } from "./auth-form";
 
 const initial: PasswordState = { status: "idle" };
 
 export function PasswordForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState(signInWithPassword, initial);
+  const problem = signInProblem(state.status);
 
   return (
     <ActionForm action={action} className={authForm}>
@@ -39,7 +40,7 @@ export function PasswordForm({ next }: { next: string }) {
           Sign-in failed. Check your email and password or try again later.
         </FieldError>
       )}
-      {state.status === "retry" && <FieldError>{retryMessage}</FieldError>}
+      {problem && <FieldError>{problem}</FieldError>}
       <SubmitButton
         size="lg"
         className="w-full"

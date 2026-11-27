@@ -164,7 +164,10 @@ export function toEvent(row: EventRow): ActivityEventDto {
     code: row.decision_code,
     group,
     outcome,
-    label,
+    label:
+      row.decision_code === "denied_agent_paused"
+        ? (row.payload_safe.detail ?? label)
+        : label,
     actor: {
       kind: row.actor_kind,
       name: row.actor_name,
@@ -236,6 +239,7 @@ function eventFilters(query: ActivityQuery) {
     query.agent || null,
     runFilter(query.run),
     sinceFor(query.range),
+    query.check_token ?? null,
   ];
 }
 
@@ -252,15 +256,16 @@ const eventsWhere = `
           a.external_key, i.name, ar.tool_key || '.' || ar.operation_key,
           ar.resource_id, ar.id::text, run.key,
           COALESCE(rule.name, ev.payload_safe->'hold'->>'name'), u.display_name,
-          token.name
+          token.name, ev.payload_safe->>'check_token'
         ) ILIKE $7)
     AND ($8::text IS NULL OR a.external_key = $8)
     AND ($9::uuid IS NULL OR run.id = $9)
     AND ($10::interval IS NULL OR ev.occurred_at >= clock_timestamp() - $10::interval)
-    AND ($11::timestamptz IS NULL
-         OR (ev.occurred_at, ev.id) < ($11::timestamptz, $12::uuid))
+    AND ($11::text IS NULL OR ev.payload_safe->>'check_token' = $11)
+    AND ($12::timestamptz IS NULL
+         OR (ev.occurred_at, ev.id) < ($12::timestamptz, $13::uuid))
   ORDER BY ev.occurred_at DESC, ev.id DESC
-  LIMIT $13`;
+  LIMIT $14`;
 
 /** One page of events matching the query, newest first, and the cursor to the next. */
 export async function queryEvents(

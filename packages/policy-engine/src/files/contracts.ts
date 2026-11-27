@@ -35,7 +35,12 @@ type FileOptions = {
   writers: string[] | null;
 };
 
-const folder = (root: string) => root.replace(/^\.\/?/, "").replace(/\/+$/, "");
+function folder(root: string) {
+  const path = root.replace(/^\.\/?/, "");
+  let end = path.length;
+  while (end > 0 && path[end - 1] === "/") end--;
+  return path.slice(0, end);
+}
 
 /** Every file contract of a compiled workspace, in declaration order. */
 export function fileContracts(compiled: CompiledContracts): FileContract[] {

@@ -36,6 +36,8 @@ export const rangeIntervals: Record<Exclude<ActivityRange, "all">, string> = {
  * Read from the URL, so anything unrecognised means "no filter". A run that
  * is not a run is the exception: the page answers 404 for it.
  */
+export const checkToken = z.string().regex(/^nodrail-check-[a-f0-9]{16}$/);
+
 export const activityQuery = z.object({
   kind: z.enum(activityKinds).catch("all"),
   outcome: z.enum(outcomeFilters).catch("all"),
@@ -43,6 +45,7 @@ export const activityQuery = z.object({
   run: z.string().trim().max(64).catch(""),
   range: z.enum(activityRanges).catch("all"),
   q: z.string().trim().max(200).catch(""),
+  check_token: checkToken.optional().catch(undefined),
   cursor: z.string().max(200).optional().catch(undefined),
 });
 

@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import type { ActionResult } from "@/components/app/action-result";
 import { Card } from "@/components/app/card";
-import { CheckboxField } from "@/components/app/choice-field";
+import { CheckboxField, ChoiceRow } from "@/components/app/choice-field";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import {
   DataActionsCell,
@@ -96,19 +96,51 @@ function CreateToken({
           </option>
         ))}
       </SelectField>
-      <fieldset className="grid gap-2.5">
+      <TokenScopeFields grantable={grantable} />
+    </ConfirmDialog>
+  );
+}
+
+function TokenScopeFields({ grantable }: { grantable: ApiTokenScope[] }) {
+  const [reporting, setReporting] = useState(false);
+  return (
+    <>
+      {grantable.includes("inventory:write") ? (
+        <fieldset className="grid gap-2.5">
+          <legend className="mb-2 text-ui font-semibold">Token type</legend>
+          <ChoiceRow
+            name="tokenType"
+            value="personal"
+            checked={!reporting}
+            onChange={() => setReporting(false)}
+            title="Personal access"
+          />
+          <ChoiceRow
+            name="tokenType"
+            value="reporting"
+            checked={reporting}
+            onChange={() => setReporting(true)}
+            title="Inventory reporting"
+            detail="For external collectors. Projects connected through apply report automatically."
+          />
+        </fieldset>
+      ) : null}
+      <fieldset
+        className="grid gap-2.5"
+        hidden={reporting}
+        disabled={reporting}
+      >
         <legend className="mb-2 text-ui font-semibold">Scopes</legend>
         <FormHint>
-          <code>read</code> is always included, but in a reporting token:{" "}
-          {scopeLabels.read}.
+          <code>read</code> is always included. {scopeLabels.read}.
         </FormHint>
         {grantable
-          .filter((scope) => scope !== "read")
+          .filter((scope) => scope !== "read" && scope !== "inventory:write")
           .map((scope) => (
             <ScopeChoice key={scope} scope={scope} />
           ))}
       </fieldset>
-    </ConfirmDialog>
+    </>
   );
 }
 
@@ -124,11 +156,18 @@ function tokenStatus(token: ApiTokenDto) {
 function TokenRow({
   workspace,
   token,
+  grantable,
 }: {
   workspace: string;
   token: ApiTokenDto;
+  grantable: ApiTokenScope[];
 }) {
   const live = !token.revokedAt;
+  const active =
+    live && (!token.expiresAt || Date.parse(token.expiresAt) > Date.now());
+  const effective = active
+    ? token.scopes.filter((scope) => grantable.includes(scope))
+    : [];
   return (
     <tr>
       <td>
@@ -138,7 +177,12 @@ function TokenRow({
           {token.mine ? null : ` · ${token.owner}`}
         </small>
       </td>
-      <td>{token.scopes.join(", ")}</td>
+      <td>
+        {token.scopes.join(", ")}
+        {token.mine ? (
+          <small>Effective now · {effective.join(", ") || "None"}</small>
+        ) : null}
+      </td>
       <td>
         {token.lastUsedAt ? timeAgo(token.lastUsedAt) : "Never used"}
         <small>{tokenStatus(token)}</small>
@@ -199,14 +243,19 @@ export function ApiTokensCard({
           <thead>
             <tr>
               <th>{list.seesEveryone ? "Token · owner" : "Token"}</th>
-              <th>Scopes</th>
+              <th>Issued scopes</th>
               <th>Last used</th>
               <DataActionsHeading />
             </tr>
           </thead>
           <tbody>
             {list.tokens.map((token) => (
-              <TokenRow key={token.id} workspace={workspace} token={token} />
+              <TokenRow
+                key={token.id}
+                workspace={workspace}
+                token={token}
+                grantable={list.grantable}
+              />
             ))}
           </tbody>
         </DataTable>
@@ -217,19 +266,53 @@ export function ApiTokensCard({
         </DataEmpty>
       )}
       {issued ? (
-        <SecretDialog
-          dialogLabel="API token ready"
-          title={`Token “${issued.token.name}” created`}
-          secretLabel="API token"
-          secret={issued.secret}
+        <IssuedToken
+          key={issued.token.id}
+          issued={issued}
+          grantable={list.grantable}
           onDone={() => setIssued(null)}
-        >
-          <FormHint>
-            Scopes: {issued.token.scopes.join(", ")}. Use it with{" "}
-            <code>nodrail login</code> or as <code>NODRAIL_TOKEN</code>.
-          </FormHint>
-        </SecretDialog>
+        />
       ) : null}
     </Card>
+  );
+}
+
+function IssuedToken({
+  issued,
+  grantable,
+  onDone,
+}: {
+  issued: IssuedApiTokenDto;
+  grantable: ApiTokenScope[];
+  onDone: () => void;
+}) {
+  const { secret, token } = issued;
+  const reporting = token.scopes.includes("inventory:write");
+  const effective = token.scopes.filter((scope) => grantable.includes(scope));
+  return (
+    <SecretDialog
+      dialogLabel="API token ready"
+      title={`Token “${token.name}” created`}
+      secretLabel="API token"
+      secret={secret}
+      onDone={onDone}
+      instructions={
+        <FormHint>
+          {reporting ? (
+            <>
+              Scope <code>inventory:write</code>. Set your external
+              collector&apos;s header to{" "}
+              <code>Authorization: Bearer &lt;token shown above&gt;</code>.
+            </>
+          ) : (
+            <>
+              Effective now · {effective.join(", ") || "None"}. Use this token
+              with <code>nodrail login --token-stdin</code> or as{" "}
+              <code>NODRAIL_TOKEN</code>.
+            </>
+          )}
+        </FormHint>
+      }
+    />
   );
 }

@@ -43,9 +43,16 @@ const summaryRow = z.object({
   holding: z.custom<RunHoldDto>().nullable(),
 });
 
-/** Each run with its counts, its step agents and what holds it now. */
+const decisionCallers = `
+  SELECT caller.external_key AS agent, ar.agent_id, ar.run_seq
+  FROM nodrail.action_requests ar
+  JOIN nodrail.agents caller ON caller.workspace_id = ar.workspace_id AND caller.id = ar.agent_id
+  WHERE ar.workspace_id = r.workspace_id AND ar.run_id = r.id
+    AND i.enrollment_project_id IS NOT NULL`;
+
+/** Each run with its counts, its callers and what holds it now. */
 const summarySelect = `
-  SELECT r.id, r.key, i.name AS installation_name, a.external_key AS agent_key,
+  SELECT r.id, r.key, i.name AS installation_name, COALESCE(primary_caller.agent, a.external_key) AS agent_key,
          r.created_at, r.last_activity_at, r.last_activity_at::text AS cursor_at,
          (SELECT count(*)::int FROM nodrail.run_steps s
           WHERE s.workspace_id = r.workspace_id AND s.run_id = r.id) AS steps,
@@ -61,23 +68,34 @@ const summarySelect = `
                    'agent', g.agent, 'steps', g.steps, 'verdict', g.verdict,
                    'finished', g.finished) ORDER BY g.first_seq NULLS LAST, g.agent),
                  '[]'::json)
-          FROM (SELECT s.agent, count(*)::int AS steps, min(s.started_seq) AS first_seq,
-                       (array_agg(s.verdict ORDER BY s.started_seq DESC NULLS LAST))[1] AS verdict,
+          FROM (SELECT s.agent, count(*) FILTER (WHERE s.is_step)::int AS steps, min(s.started_seq) AS first_seq,
+                       (array_agg(s.verdict ORDER BY s.is_step DESC, s.started_seq DESC NULLS LAST))[1] AS verdict,
                        (array_agg(s.finished_at IS NOT NULL
-                                  ORDER BY s.started_seq DESC NULLS LAST))[1] AS finished
-                FROM nodrail.run_steps s
-                WHERE s.workspace_id = r.workspace_id AND s.run_id = r.id
+                                  ORDER BY s.is_step DESC, s.started_seq DESC NULLS LAST))[1] AS finished
+                FROM (
+                  SELECT step.agent, step.started_seq, step.verdict, step.finished_at, true AS is_step
+                  FROM nodrail.run_steps step
+                  WHERE step.workspace_id = r.workspace_id AND step.run_id = r.id
+                  UNION ALL
+                  SELECT decision.agent, decision.run_seq, NULL, NULL, false
+                  FROM (${decisionCallers}) decision
+                ) s
                 GROUP BY s.agent) g) AS agents,
          (SELECT ar.run_hold
           FROM nodrail.action_requests ar
-          WHERE ar.workspace_id = r.workspace_id AND ar.run_id = r.id
+          WHERE ar.workspace_id = r.workspace_id AND ar.run_id = r.id AND ar.access_epoch > 0
           ORDER BY ar.run_seq DESC NULLS LAST, ar.created_at DESC
           LIMIT 1) AS holding
   FROM nodrail.runs r
   JOIN nodrail.installations i
     ON i.workspace_id = r.workspace_id AND i.id = r.installation_id
   LEFT JOIN nodrail.agents a
-    ON a.workspace_id = r.workspace_id AND a.id = i.agent_id`;
+    ON a.workspace_id = r.workspace_id AND a.id = i.agent_id
+  LEFT JOIN LATERAL (
+    SELECT decision.agent FROM (${decisionCallers}) decision
+    ORDER BY (decision.agent_id <> i.agent_id) DESC, decision.run_seq DESC
+    LIMIT 1
+  ) primary_caller ON true`;
 
 function statusOf(row: z.infer<typeof summaryRow>): RunStatus {
   if (row.holding) return "held";
@@ -134,8 +152,10 @@ export async function listRuns(
       `${summarySelect}
        WHERE r.workspace_id = $1 AND r.environment_id = $2
          AND ($3::text IS NULL
-              OR concat_ws(' ', r.key, i.name, a.external_key) ILIKE $3)
-         AND ($4::text IS NULL OR a.external_key = $4)
+              OR concat_ws(' ', r.key, i.name, COALESCE(primary_caller.agent, a.external_key)) ILIKE $3
+              OR EXISTS (SELECT 1 FROM (${decisionCallers}) d WHERE d.agent ILIKE $3))
+         AND ($4::text IS NULL OR COALESCE(primary_caller.agent, a.external_key) = $4
+              OR EXISTS (SELECT 1 FROM (${decisionCallers}) d WHERE d.agent = $4))
          AND ($5::interval IS NULL
               OR r.last_activity_at >= clock_timestamp() - $5::interval)
          AND ${outcomeExists}

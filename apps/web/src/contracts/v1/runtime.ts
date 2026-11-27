@@ -59,8 +59,15 @@ const receiptInput = z.union([
   z.object({ text: z.string().max(MAX_RECEIPT_TEXT) }).strict(),
 ]);
 
+export const runtimeAgent = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9_-]{0,62}$/)
+  .optional();
+
 export const stepInput = z
   .object({
+    agent: runtimeAgent,
+    policy_digest: policyDigest.optional(),
     run: runInput.pick({ key: true }),
     step: runStep,
     event: z.enum(["started", "finished"]),
@@ -81,6 +88,7 @@ export const stepInput = z
 
 export const submitActionInput = z
   .object({
+    agent: runtimeAgent,
     tool: ruleInput.shape.toolKey,
     operation: ruleInput.shape.operationKey,
     resource: z
@@ -121,6 +129,7 @@ const measuredInput = z
 
 export const reportInput = z
   .object({
+    agent: runtimeAgent,
     report_key: z.string().min(1).max(128),
     outcome: z.enum(["success", "failure", "unknown"]),
     permit_id: z.uuid().optional(),

@@ -50,7 +50,7 @@ function AgentsTile({ base, health }: { base: string; health: HealthDto }) {
       className={linkedTileClass}
     >
       <TileTop
-        label="Agents reporting"
+        label="Installations reporting"
         badge={
           quiet
             ? { tone: "warning", text: "Needs a look" }
@@ -77,7 +77,7 @@ function AgentsTile({ base, health }: { base: string; health: HealthDto }) {
         ) : null}
         {quiet
           ? null
-          : `Every agent checked in within ${REPORTING_WINDOW_MINUTES} minutes.`}
+          : `Every connected installation checked in within ${REPORTING_WINDOW_MINUTES} minutes.`}
       </span>
     </Link>
   );

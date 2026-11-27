@@ -20,6 +20,8 @@ export function safeNextPath(
   const home = productPath("", short);
   if (typeof value !== "string" || !PLAIN_PATH.test(value)) return home;
   if (value.includes("//")) return home;
+  if (/^\/api\/v1\/cli\/login\/approve\/[a-f0-9]{64}$/.test(value))
+    return value;
   if (INVITE.test(value) || isProductPath(value, short)) return value;
   return home;
 }

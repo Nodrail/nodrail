@@ -1,3 +1,4 @@
+import { docsUrl } from "@/features/guidance/docs-url";
 import Link from "next/link";
 import { TextLink } from "@/components/app/text-link";
 import { CardLinks, EmptyState } from "@/components/app/card";
@@ -16,37 +17,24 @@ import {
 /** How runs start, for a section with none in its window. */
 const runsDocs = (
   <Button asChild variant="outline">
-    <a href="/docs/runs">How runs work</a>
+    <a href={docsUrl("runs")}>How runs work</a>
   </Button>
 );
 
 /** No runs in the window: what makes them appear, and the first step. */
-function NoRuns({
-  days,
-  hasRules,
-  importHref,
-}: {
-  days: ReportWindow;
-  hasRules: boolean;
-  importHref: string | null;
-}) {
+function NoRuns({ days, base }: { days: ReportWindow; base: string }) {
   return (
     <EmptyState
       inline
       title={`No runs in the last ${days} days`}
       action={
-        !hasRules && importHref ? (
-          <Button asChild variant="outline">
-            <Link href={importHref}>Import rules</Link>
-          </Button>
-        ) : (
-          runsDocs
-        )
+        <Button asChild variant="outline">
+          <Link href={`${base}/policies/budgets`}>Open budgets</Link>
+        </Button>
       }
     >
-      {hasRules
-        ? "This section shows where gates and budgets hold a run's work. It fills in when an integration sends its intents with a run key and reports the steps its agents take."
-        : "Gates make a run wait for checks, and budgets cap what it spends. Add them to a rules file and import it, then send intents with a run key."}
+      A first tool decision can create a run. Add a budget in Policies to cap
+      what a run spends. Step reporting depends on the host and integration.
     </EmptyState>
   );
 }
@@ -63,11 +51,10 @@ export function GatesInsight({
   base: string;
   canImport: boolean;
 }) {
-  const hasRules = report.gates.length + report.budgets.length > 0;
   return (
     <InsightSection
       question="Where do gates and budgets stop work?"
-      description="Runs active in the window, explained against the gates and budgets live now. First pass: runs whose first action at the gate was not held."
+      description="Runs active in this window, compared with the gates and budgets live now. Gate figures use server decisions."
       action={
         <CardLinks>
           <TextLink href={`${base}/policies/gates`}>Open gates</TextLink>
@@ -75,18 +62,15 @@ export function GatesInsight({
       }
     >
       {report.runs.count === 0 ? (
-        <NoRuns
-          days={days}
-          hasRules={hasRules}
-          importHref={canImport ? `${base}/policies/import` : null}
-        />
+        <NoRuns days={days} base={base} />
       ) : (
         <>
           <Figures
             figures={[
               {
-                label: "Passed every gate without a hold",
+                label: "Runs with no recorded gate denial",
                 value: shareLabel(report.runs.withoutHold),
+                hint: "Server-decided calls covered by current gates",
               },
               {
                 label: "Budget overruns",

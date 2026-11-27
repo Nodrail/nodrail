@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  RepositoryPublishWarning,
+  useRepositoryProject,
+} from "./repository-policy";
 import type { ReactNode } from "react";
 import { Card, CardActions } from "@/components/app/card";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
@@ -82,6 +86,7 @@ export function PolicyFilePreview({
   title?: string;
   showIssues?: boolean;
 }) {
+  const project = useRepositoryProject();
   const { issues, warnings, added, changed, removed, unchanged } = preview;
   const changes = added.length + changed.length + removed.length;
   return (
@@ -112,7 +117,12 @@ export function PolicyFilePreview({
             confirmLabel="Publish rules"
             confirmVariant={removed.length ? "destructive" : "default"}
             action={() =>
-              publishPolicyFile({ workspace, environment }, text, preview)
+              publishPolicyFile(
+                { workspace, environment },
+                text,
+                preview,
+                project?.id ?? null,
+              )
             }
             onSuccess={onApplied}
           >
@@ -121,8 +131,8 @@ export function PolicyFilePreview({
               {removed.length
                 ? ` ${plural(removed.length, "rule")} not in the file will be removed.`
                 : ""}{" "}
-              Requests whose outcome changes are closed.
             </p>
+            <RepositoryPublishWarning />
           </ConfirmDialog>
         </CardActions>
       ) : null}

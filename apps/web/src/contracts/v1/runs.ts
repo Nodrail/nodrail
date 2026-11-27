@@ -103,6 +103,7 @@ export type RunActionDto = {
   operationKey: string;
   resource: string;
   evaluation: "ready" | "denied";
+  pauseDenial?: string;
   hold: RunHoldDto | null;
   /** Its event in Activity, once anything about it is recorded there. */
   eventId: string | null;

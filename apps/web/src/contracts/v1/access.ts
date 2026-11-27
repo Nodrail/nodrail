@@ -5,6 +5,7 @@ export const capabilities = [
   "workspace:read",
   "workspace:settings",
   "policies:write",
+  "projects:apply",
   "agents:manage",
   "members:manage",
   "ownership:manage",
@@ -13,11 +14,12 @@ export type Capability = (typeof capabilities)[number];
 
 const roleCapabilities: Record<Role, readonly Capability[]> = {
   viewer: ["workspace:read"],
-  policy_manager: ["workspace:read", "policies:write"],
+  policy_manager: ["workspace:read", "policies:write", "projects:apply"],
   admin: [
     "workspace:read",
     "workspace:settings",
     "policies:write",
+    "projects:apply",
     "agents:manage",
     "members:manage",
   ],

@@ -75,7 +75,11 @@ function rpc(child) {
 }
 
 async function listTools(folder, url, flags) {
-  const child = spawn(join("node_modules", ".bin", "nodrail-mcp"), flags, {
+  // Run the installed entry point with this Node and no shell. Through a
+  // shell on Windows, kill() would stop only cmd.exe and leave the server
+  // holding the temporary folder open.
+  const entry = join(folder, "node_modules", "@nodrail", "mcp", "dist", "nodrail-mcp.mjs");
+  const child = spawn(process.execPath, [entry, ...flags], {
     cwd: folder,
     env: {
       PATH: process.env.PATH,
@@ -83,8 +87,8 @@ async function listTools(folder, url, flags) {
       NODRAIL_TOKEN: "ndp_pack",
       NODRAIL_URL: url,
     },
-    shell: process.platform === "win32",
   });
+  const exited = new Promise((done) => child.once("exit", done));
   let stderr = "";
   child.stderr.on("data", (chunk) => (stderr += chunk));
   try {
@@ -101,6 +105,7 @@ async function listTools(folder, url, flags) {
     return listed.result.tools.map((tool) => tool.name).sort();
   } finally {
     child.kill();
+    await exited;
   }
 }
 

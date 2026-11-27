@@ -12,19 +12,24 @@ export async function issueSession(
   manager: EntityManager,
   userId: string,
   previousToken?: string,
+  cliOrigin?: string,
 ): Promise<IssuedSession> {
   if (isToken(previousToken)) await revokeToken(manager, previousToken);
   const token = newToken();
   const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000);
   await manager.query(
     "INSERT INTO nodrail.human_sessions (user_id, token_digest, expires_at) VALUES ($1, $2, $3)",
-    [userId, tokenDigest(token), expiresAt],
+    [userId, sessionDigest(token, cliOrigin), expiresAt],
   );
   return { token, expiresAt };
 }
 
+const sessionDigest = (token: string, cliOrigin?: string) =>
+  tokenDigest(cliOrigin ? `cli:${cliOrigin}:${token}` : token);
+
 export async function resolveSession(
   token: unknown,
+  cliOrigin?: string,
 ): Promise<HumanPrincipal | null> {
   if (!isToken(token)) return null;
   return asAuthenticator(async (manager) => {
@@ -33,21 +38,25 @@ export async function resolveSession(
        FROM nodrail.human_sessions s JOIN nodrail.users u ON u.id = s.user_id
        WHERE s.token_digest = $1 AND s.revoked_at IS NULL
          AND s.expires_at > clock_timestamp() AND u.status = 'active'`,
-      [tokenDigest(token)],
+      [sessionDigest(token, cliOrigin)],
     );
     return principal ?? null;
   });
 }
 
-async function revokeToken(manager: EntityManager, token: string) {
+async function revokeToken(
+  manager: EntityManager,
+  token: string,
+  cliOrigin?: string,
+) {
   await manager.query(
     `UPDATE nodrail.human_sessions SET revoked_at = clock_timestamp()
      WHERE token_digest = $1 AND revoked_at IS NULL`,
-    [tokenDigest(token)],
+    [sessionDigest(token, cliOrigin)],
   );
 }
 
-export async function revokeSession(token: unknown) {
+export async function revokeSession(token: unknown, cliOrigin?: string) {
   if (isToken(token))
-    await asAuthenticator((manager) => revokeToken(manager, token));
+    await asAuthenticator((manager) => revokeToken(manager, token, cliOrigin));
 }

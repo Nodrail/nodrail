@@ -1,6 +1,10 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import {
+  requireReviewedRepository,
+  type PolicyWriteContext,
+} from "./repository";
 import { sourceColumns, type VersionOrigin } from "./managed";
 import {
   conditionLabel,
@@ -312,7 +316,7 @@ export async function publishSnapshot(
  * lock, so edits to different rules never conflict and history never changes.
  */
 async function applyChange(
-  context: WorkspaceContext,
+  context: PolicyWriteContext,
   environmentSlug: string,
   change: Change,
 ): Promise<RuleChangeResultDto> {
@@ -325,6 +329,7 @@ async function applyChange(
      WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
     [workspaceId, environmentId],
   );
+  await requireReviewedRepository(context, environmentId);
   const active = await manager.findOneByOrFail(ActivePolicy, {
     workspaceId,
     environmentId,
@@ -346,7 +351,10 @@ async function applyChange(
     if (existing.ruleRevision !== change.expectedRuleRevision)
       throw new AppError("RULE_CHANGED");
   } else if (current.length >= MAX_RULES_PER_ENVIRONMENT) {
-    throw new AppError("INVALID_INPUT");
+    throw new AppError(
+      "RULE_LIMIT_REACHED",
+      `This environment has reached its limit of ${MAX_RULES_PER_ENVIRONMENT} rules. Revoke an existing rule before creating another.`,
+    );
   }
 
   const replacement =
@@ -389,7 +397,7 @@ async function applyChange(
 }
 
 export function createRule(
-  context: WorkspaceContext,
+  context: PolicyWriteContext,
   environmentSlug: string,
   rawRule: unknown,
 ) {
@@ -401,7 +409,7 @@ export function createRule(
 }
 
 export function updateRule(
-  context: WorkspaceContext,
+  context: PolicyWriteContext,
   environmentSlug: string,
   logicalRuleId: string,
   expectedRuleRevision: number,
@@ -417,7 +425,7 @@ export function updateRule(
 }
 
 export function revokeRule(
-  context: WorkspaceContext,
+  context: PolicyWriteContext,
   environmentSlug: string,
   logicalRuleId: string,
   expectedRuleRevision: number,

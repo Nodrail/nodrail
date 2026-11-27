@@ -1,7 +1,7 @@
 # Security
 
 Please report vulnerabilities privately, through
-[GitHub's private reporting](https://github.com/Nodrail/nodrail-js/security/advisories/new)
+[GitHub's private reporting](https://github.com/Nodrail/nodrail/security/advisories/new)
 or to hello@nodrail.com, with steps to reproduce. Do not open a public issue.
 
 Most useful: a deciding or publishing tool offered without its flag or scope,

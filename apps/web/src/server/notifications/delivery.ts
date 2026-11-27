@@ -1,76 +1,11 @@
 import "server-only";
 import { REPORTING_WINDOW_MINUTES } from "@/contracts/v1/agents";
-import type {
-  NotificationKind,
-  NotificationPayloads,
-} from "@/contracts/v1/notifications";
 import { asNotifier, asSystem } from "@/server/db/context";
 import { emailConfigured, sendEmail, type SendEmail } from "./mailer";
 import { enqueueNotification, placeNames } from "./outbox";
-import { renderNotification } from "./render";
+import { deliverNextNotification } from "./notification-claims";
 
-const MAX_ATTEMPTS = 5;
 const BATCH = 25;
-const LEASE_SECONDS = 60;
-/** Minutes before each retry. */
-const BACKOFF = [1, 5, 30, 120];
-
-type Claimed = {
-  id: string;
-  kind: NotificationKind;
-  recipient_email: string;
-  payload_safe: NotificationPayloads[NotificationKind];
-  attempts: number;
-};
-
-/** A short transaction: the lease is what keeps others away during sending. */
-function claimBatch(size: number): Promise<Claimed[]> {
-  return asNotifier(async (manager) => {
-    await manager.query(
-      `UPDATE nodrail.notification_outbox SET state = 'failed'
-       WHERE state = 'sending' AND lease_until <= clock_timestamp()
-         AND attempts >= $1`,
-      [MAX_ATTEMPTS],
-    );
-    const [rows]: [Claimed[], number] = await manager.query(
-      `UPDATE nodrail.notification_outbox o
-       SET state = 'sending', attempts = o.attempts + 1,
-           lease_until = clock_timestamp() + make_interval(secs => $2)
-       WHERE o.id IN (
-         SELECT id FROM nodrail.notification_outbox
-         WHERE (state = 'pending' AND available_at <= clock_timestamp())
-            OR (state = 'sending' AND lease_until <= clock_timestamp())
-         ORDER BY available_at, id
-         LIMIT $1
-         FOR UPDATE SKIP LOCKED)
-       RETURNING o.id, o.kind, o.recipient_email, o.payload_safe, o.attempts`,
-      [size, LEASE_SECONDS],
-    );
-    return rows;
-  });
-}
-
-const settle = (id: string, sql: string, values: unknown[] = []) =>
-  asNotifier((manager) =>
-    manager.query(
-      `UPDATE nodrail.notification_outbox SET ${sql} WHERE id = $1`,
-      [id, ...values],
-    ),
-  );
-
-function retryOrFail(item: Claimed, error: unknown) {
-  // Provider messages can quote addresses, so only the type is kept.
-  const reason = error instanceof Error ? error.name : "Error";
-  const delay = BACKOFF[item.attempts - 1];
-  return item.attempts >= MAX_ATTEMPTS || delay === undefined
-    ? settle(item.id, `state = 'failed', last_error = $2`, [reason])
-    : settle(
-        item.id,
-        `state = 'pending', last_error = $2,
-         available_at = clock_timestamp() + make_interval(mins => $3)`,
-        [reason, delay],
-      );
-}
 
 export type DeliveryResult = {
   delivered: number;
@@ -87,29 +22,10 @@ export async function deliverNotifications(
   if (!options.send && !emailConfigured()) return result;
   const origin = options.origin ?? process.env.APP_ORIGIN ?? "";
 
-  for (const item of await claimBatch(options.batch ?? BATCH)) {
-    const { expiresAt } = item.payload_safe;
-    if (expiresAt && Date.parse(expiresAt) <= Date.now()) {
-      await settle(item.id, `state = 'dropped'`);
-      result.dropped += 1;
-      continue;
-    }
-    try {
-      await send({
-        ...renderNotification(item.kind, item.payload_safe, origin),
-        to: item.recipient_email,
-        messageId: item.id,
-      });
-    } catch (error) {
-      await retryOrFail(item, error);
-      result.retried += 1;
-      continue;
-    }
-    await settle(
-      item.id,
-      `state = 'delivered', delivered_at = clock_timestamp(), lease_until = NULL`,
-    );
-    result.delivered += 1;
+  for (let attempt = 0; attempt < (options.batch ?? BATCH); attempt += 1) {
+    const outcome = await deliverNextNotification(send, origin);
+    if (outcome === null) break;
+    if (outcome !== "superseded") result[outcome] += 1;
   }
   return result;
 }

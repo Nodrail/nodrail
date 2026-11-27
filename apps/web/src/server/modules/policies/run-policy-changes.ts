@@ -4,9 +4,14 @@ import type { PolicyDocument } from "@nodrail/policy-engine";
 import { renderPolicies } from "@nodrail/policy-engine/yaml";
 import type { PolicyFileResultDto } from "@/contracts/v1/policies";
 import type { RunPolicyChange } from "@/contracts/v1/runs";
-import { AppError, type WorkspaceContext } from "@/server/db/context";
+import { AppError } from "@/server/db/context";
+import {
+  requireReviewedRepository,
+  type PolicyWriteContext,
+} from "./repository";
 import { publishPlanned } from "./publish";
-import { livePolicy, lockEnvironment, namedDocument, plan } from "./rule-files";
+import { lockEnvironment } from "./environment-lock";
+import { livePolicy, namedDocument, plan } from "./rule-files";
 
 // One gate or budget changed from its form: the live file with that change,
 // checked and published the way the YAML tab publishes a file.
@@ -59,7 +64,7 @@ function withChange(
  * publishes, so a form can't save what the file would refuse.
  */
 export async function changeRunPolicy(
-  context: WorkspaceContext,
+  context: PolicyWriteContext,
   environmentSlug: string,
   change: RunPolicyChange,
   expectedRevision: number,
@@ -67,6 +72,7 @@ export async function changeRunPolicy(
   { ok: true; result: PolicyFileResultDto } | { ok: false; problems: string[] }
 > {
   const environmentId = await lockEnvironment(context, environmentSlug);
+  await requireReviewedRepository(context, environmentId);
   const live = await livePolicy(context, environmentId);
   if (live.revision !== expectedRevision) throw new AppError("RULE_CHANGED");
   const named = await namedDocument(context, environmentId);

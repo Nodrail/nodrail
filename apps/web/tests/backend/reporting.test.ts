@@ -295,6 +295,8 @@ describe("local runs", () => {
     );
     expect(runs).toHaveLength(4);
     expect(new Set(runs.map((run) => run.id)).size).toBe(4);
+    const byProjection = (a: unknown, b: unknown) =>
+      JSON.stringify(a).localeCompare(JSON.stringify(b));
     expect(
       runs
         .map((run) => [
@@ -304,14 +306,14 @@ describe("local runs", () => {
           run.actions.allowed,
           run.actions.denied,
         ])
-        .sort(),
+        .sort(byProjection),
     ).toEqual(
       [
         ["desk", true, "a", 1, 0],
         ["desk", true, "b", 1, 0],
         ["desk", false, "a", 1, 0],
         ["other", true, "a", 0, 1],
-      ].sort(),
+      ].sort(byProjection),
     );
   });
 });

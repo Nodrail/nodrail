@@ -17,12 +17,13 @@ import { readForClient, runWorkspaceAction } from "@/features/shell/load-view";
 import { createRule, revokeRule, updateRule } from "@/server/modules/policies";
 import { previewImpact } from "@/server/modules/policies/impact";
 import { changeRunPolicy } from "@/server/modules/policies/run-policy-changes";
+import type { PolicyWriteContext } from "@/server/modules/policies/repository";
 import type { ErrorCode } from "@/server/db/context";
 import { ruleFromForm } from "./form";
 
 const messages: Partial<Record<ErrorCode, string>> = {
   INVALID_INPUT:
-    "Check the operation, resource and conditions, then try again.",
+    "Choose an agent and installation available in this environment.",
   RULE_CHANGED:
     "Someone else changed this rule. Reload the page to see the latest version.",
 };
@@ -40,11 +41,51 @@ function toResult(
     : result;
 }
 
+const ruleFieldMessages: Record<string, string> = {
+  name: "Enter a rule name.",
+  effect: "Choose Allow or Deny.",
+  agentKey: "Choose an agent available in this environment.",
+  installationName: "Choose an installation for the selected agent.",
+  toolKey: "Choose a tool and operation.",
+  operationKey: "Choose a tool and operation.",
+  resource: "Check the resource kind, match and value.",
+  conditions: "Check the rule conditions.",
+  expiresAt: "Enter a valid expiry date and time.",
+};
+
 /** A rule the form can name the problem with is refused here, in words. */
 function formIssue(rule: unknown): ActionResult<RuleChangeResultDto> | null {
   const parsed = ruleInput.safeParse(rule);
-  const problem = parsed.success ? ruleProblem(parsed.data) : null;
+  const problem = parsed.success
+    ? ruleProblem(parsed.data)
+    : (ruleFieldMessages[String(parsed.error.issues[0]?.path[0])] ??
+      "Check the rule fields.");
   return problem ? { status: "error", message: problem } : null;
+}
+
+async function submitRule(
+  workspace: string,
+  data: FormData,
+  success: string,
+  run: (
+    context: PolicyWriteContext,
+    rule: ReturnType<typeof ruleFromForm>,
+  ) => Promise<RuleChangeResultDto>,
+) {
+  const rule = ruleFromForm(data);
+  const issue = formIssue(rule);
+  if (issue) return issue;
+  const reviewed = data.get("reviewedProjectId");
+  const reviewedProjectId =
+    typeof reviewed === "string" && reviewed ? reviewed : null;
+  return toResult(
+    success,
+    await runWorkspaceAction(
+      workspace,
+      (context) => run({ ...context, reviewedProjectId }, rule),
+      messages,
+    ),
+  );
 }
 
 export async function createRuleAction(
@@ -53,17 +94,8 @@ export async function createRuleAction(
   _previous: ActionResult<RuleChangeResultDto>,
   data: FormData,
 ) {
-  const rule = ruleFromForm(data);
-  return (
-    formIssue(rule) ??
-    toResult(
-      "Rule published",
-      await runWorkspaceAction(
-        workspace,
-        (context) => createRule(context, environment, rule),
-        messages,
-      ),
-    )
+  return submitRule(workspace, data, "Rule published", (context, rule) =>
+    createRule(context, environment, rule),
   );
 }
 
@@ -75,17 +107,8 @@ export async function updateRuleAction(
   _previous: ActionResult<RuleChangeResultDto>,
   data: FormData,
 ) {
-  const rule = ruleFromForm(data);
-  return (
-    formIssue(rule) ??
-    toResult(
-      "Rule updated",
-      await runWorkspaceAction(
-        workspace,
-        (context) => updateRule(context, environment, ruleId, revision, rule),
-        messages,
-      ),
-    )
+  return submitRule(workspace, data, "Rule updated", (context, rule) =>
+    updateRule(context, environment, ruleId, revision, rule),
   );
 }
 
@@ -94,12 +117,19 @@ export async function revokeRuleAction(
   environment: string,
   ruleId: string,
   revision: number,
+  reviewedProjectId: string | null,
 ) {
   return toResult(
     "Rule revoked",
     await runWorkspaceAction(
       workspace,
-      (context) => revokeRule(context, environment, ruleId, revision),
+      (context) =>
+        revokeRule(
+          { ...context, reviewedProjectId },
+          environment,
+          ruleId,
+          revision,
+        ),
       messages,
     ),
   );
@@ -125,6 +155,7 @@ export async function changeRunPolicyAction(
   environment: string,
   change: RunPolicyChange,
   revision: number,
+  reviewedProjectId: string | null,
 ): Promise<ActionResult<PolicyFileResultDto>> {
   const entry =
     change.entry === null
@@ -143,13 +174,14 @@ export async function changeRunPolicyAction(
     workspace,
     (context) =>
       changeRunPolicy(
-        context,
+        { ...context, reviewedProjectId },
         environment,
         { ...change, entry: entry.data } as RunPolicyChange,
         revision,
       ),
     {
-      ...messages,
+      INVALID_INPUT:
+        "Check the entry fields and any referenced agents in this environment.",
       RULE_CHANGED:
         "The policies changed since you opened this page. Reload to see the latest version.",
       NOT_FOUND: "This entry is no longer in the policies. Reload the page.",

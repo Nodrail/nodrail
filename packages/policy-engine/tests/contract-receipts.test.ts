@@ -561,6 +561,52 @@ describe("boundaries", () => {
     );
   });
 
+  test("long entry spacing and verdict words finish within the timing budget", () => {
+    const spaces = " ".repeat(6_000);
+    const headline = "RECEIPT qa";
+    const valid = `${headline}\nresult: ${spaces}PASS!!!\nissue: x`;
+    const punctuated = `${headline}\nresult: PASS${"!".repeat(7_000)}x\nissue: x`;
+    const started = performance.now();
+    const entries = readHeaderBlock(valid, (line) =>
+      line === headline ? "qa" : null,
+    );
+    const reading = readContractReceipt(punctuated, contract, "qa");
+    expect(performance.now() - started).toBeLessThan(100);
+    expect(entries?.entries).toEqual([
+      ["result", "PASS!!!"],
+      ["issue", "x"],
+    ]);
+    expect(reading.state).toBe("invalid");
+  });
+
+  test("long entry spacing before an internal line separator fails quickly", () => {
+    const title = "RECEIPT qa";
+    const line = `result:${" ".repeat(12_000)}PASS\u2028extra`;
+    const started = performance.now();
+    const block = readHeaderBlock(`${title}\n${line}`, (text) =>
+      text === title ? "qa" : null,
+    );
+    expect(performance.now() - started).toBeLessThan(100);
+    expect(block).toBeNull();
+  });
+
+  test("unknown keys and long continuation spacing retain the block's rules", () => {
+    const spaces = " ".repeat(7_000);
+    const head = "RECEIPT qa";
+    const message = `${head}\nresult: PASS\n\nUnknown key:${spaces}x\nissue:\n- ${spaces}continued`;
+    const started = performance.now();
+    const block = readHeaderBlock(
+      message,
+      (line) => (line === head ? "qa" : null),
+      16_384,
+    );
+    expect(performance.now() - started).toBeLessThan(100);
+    expect(block?.entries).toEqual([
+      ["result", "PASS"],
+      ["issue", "continued"],
+    ]);
+  });
+
   test("200,000 characters before a header take no time", () => {
     const message = `${"RECEIPT qa\nx\n".repeat(20_000)}RECEIPT qa\nresult: PASS\nissue: x\n`;
     const started = performance.now();

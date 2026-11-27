@@ -2,7 +2,7 @@ name: nodrail
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -52,6 +52,8 @@ services:
       NODRAIL_DEPLOYMENT: self-hosted
       NODRAIL_MONTHLY_ACTIONS: ${NODRAIL_MONTHLY_ACTIONS:-}
       NODRAIL_MONTHLY_STEPS: ${NODRAIL_MONTHLY_STEPS:-}
+      NODRAIL_ADMISSION_TTL_SECONDS: ${NODRAIL_ADMISSION_TTL_SECONDS:-}
+      NODRAIL_ADMISSION_KEYS: ${NODRAIL_ADMISSION_KEYS:-}
 
   scheduler:
     image: *server-image

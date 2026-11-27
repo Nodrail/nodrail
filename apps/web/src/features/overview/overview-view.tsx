@@ -15,7 +15,7 @@ import {
 } from "@/server/modules/overview";
 import { listHeldRuns, listRuns } from "@/server/modules/runs";
 import { getFirstSteps, readGuidance } from "@/server/modules/guidance";
-import { allStepsDone, checklistKey } from "@/contracts/v1/guidance";
+import { environmentChecklistKey } from "@/contracts/v1/guidance";
 import type { WorkspaceViewDto } from "@/contracts/v1/workspaces";
 import { COVERAGE } from "@/contracts/v1/glossary";
 import { HealthTiles, allowanceReached } from "./health-tiles";
@@ -134,8 +134,12 @@ function Band({
  * For people who set the workspace up: the first steps until all are done or
  * they set them aside, and what reports each step done.
  */
-async function loadFirstSteps(view: WorkspaceViewDto, place: Place) {
-  if (!view.capabilities.includes("agents:manage")) return null;
+async function loadFirstSteps(
+  view: WorkspaceViewDto,
+  place: Place,
+  checkedIn: boolean,
+) {
+  if (!view.capabilities.includes("policies:write")) return null;
   const { steps, guidance } = await readForPage(
     place.workspace,
     async (context) => ({
@@ -143,9 +147,18 @@ async function loadFirstSteps(view: WorkspaceViewDto, place: Place) {
       guidance: await readGuidance(context),
     }),
   );
-  const tracker = <FirstStepsTracker workspaceId={view.id} steps={steps} />;
-  const open = !allStepsDone(steps) && !(checklistKey(view.id) in guidance);
-  return { tracker, open, steps };
+  const tracker = (
+    <FirstStepsTracker
+      workspaceId={view.id}
+      steps={{ ...steps, agent: checkedIn || steps.decision }}
+    />
+  );
+  const environmentId = view.environments.find(
+    (item) => item.slug === place.environment,
+  )!.id;
+  const open =
+    !steps.decision && !(environmentChecklistKey(environmentId) in guidance);
+  return { tracker, open, steps, environmentId };
 }
 
 /**
@@ -167,12 +180,12 @@ async function OverviewBody(place: Place) {
   const state = await readForPage(workspace, (context) =>
     getOverviewState(context, environment),
   );
-  const first = await loadFirstSteps(view, place);
+  const first = await loadFirstSteps(view, place, state.checkedIn);
   const setup = first?.open ? (
     <FirstSteps
       base={baseOf(place)}
       workspaceBase={appPath(workspace)}
-      workspaceId={view.id}
+      environmentId={first.environmentId}
       steps={first.steps}
       checkedIn={state.checkedIn}
     />

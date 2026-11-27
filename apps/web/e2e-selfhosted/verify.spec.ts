@@ -47,9 +47,9 @@ test("the inventory and the local reports show what ran", async ({ page }) => {
     await expect(
       page.locator("[data-slot=local-run]").filter({ hasText: text }),
     ).not.toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: /approve|deny|pause/i }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /deny|pause/i })).toHaveCount(
+    0,
+  );
   await page.screenshot({
     path: `${process.env.ACCEPTANCE_STATE}.local.png`,
     fullPage: true,

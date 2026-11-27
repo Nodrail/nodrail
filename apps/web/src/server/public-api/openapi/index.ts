@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cliSetupOperations } from "./cli-setup";
 import { existingOperations } from "./existing";
 import { managementOperations } from "./management";
 import { operation, type Auth, type Operation } from "./operation";
@@ -41,11 +42,12 @@ function jsonContent(schema: z.ZodType, at: string, io?: "input" | "output") {
 
 const getSecurity = (auth: Auth) => {
   if (auth === "public") return [];
+  if (auth === "cliSession") return [{ cliSession: [] }];
   if (auth === "github") return [{ githubActions: [] }];
   if (typeof auth === "string") return [{ consoleSession: [] }];
   if ("runtime" in auth) return [{ runtimeCredential: [] }];
-  const token = { personalToken: [] };
-  return auth.bearerOnly ? [token] : [token, { consoleSession: [] }];
+  const bearer = [{ personalToken: [] }, { cliSession: [] }];
+  return auth.bearerOnly ? bearer : [...bearer, { consoleSession: [] }];
 };
 
 const hasWorkspaceSession = (auth: Auth) =>
@@ -57,7 +59,9 @@ const acceptsSession = (auth: Auth) =>
 
 function parameters(entry: Operation) {
   const query = entry.query && resolvableQuery(entry.query);
-  const supportsSession = hasWorkspaceSession(entry.auth);
+  const selectsWorkspace =
+    entry.auth === "workspaceSession" ||
+    (typeof entry.auth === "object" && "management" in entry.auth);
   return [
     ...[...entry.path.matchAll(/\{([^}]+)\}/g)].map(([, name]) => ({
       name,
@@ -71,14 +75,14 @@ function parameters(entry: Operation) {
       required: query?.required?.includes(name) ?? false,
       schema,
     })),
-    ...(supportsSession
+    ...(selectsWorkspace
       ? [
           {
             name: "workspace",
             in: "query",
             required: entry.auth === "workspaceSession",
             description:
-              "Workspace slug. Required for a console session and omitted for a bearer token.",
+              "Workspace slug. Console clients must supply it. CLI sessions use it to select the workspace and personal tokens can supply it to confirm their workspace.",
             schema: { type: "string" },
           },
         ]
@@ -154,11 +158,13 @@ function describe(entry: Operation) {
       "200": {
         description: "Success",
         content: {
-          ...jsonContent(
-            result ?? z.unknown(),
-            `${at}/responses/200`,
-            "output",
-          ),
+          ...(entry.html
+            ? { "text/html": { schema: { type: "string" } } }
+            : jsonContent(
+                result ?? z.unknown(),
+                `${at}/responses/200`,
+                "output",
+              )),
           ...(entry.protobuf ? protobuf : {}),
         },
       },
@@ -178,6 +184,7 @@ export function openApiDocument() {
   const paths: Record<string, Record<string, ReturnType<typeof describe>>> = {};
   const entries = [
     ...existingOperations,
+    ...cliSetupOperations,
     ...managementOperations,
     ...runtimeOperations,
     operation("get", "/openapi.json", "Read this OpenAPI document", {
@@ -199,6 +206,7 @@ export function openApiDocument() {
     paths,
     components: {
       securitySchemes: {
+        cliSession: { type: "http", scheme: "bearer", bearerFormat: "ndc_" },
         personalToken: { type: "http", scheme: "bearer", bearerFormat: "ndp_" },
         runtimeCredential: {
           type: "http",

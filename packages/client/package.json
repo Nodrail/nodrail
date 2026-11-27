@@ -1,6 +1,6 @@
 {
   "name": "@nodrail/client",
-  "version": "0.8.0",
+  "version": "0.9.1",
   "description": "TypeScript client for the Nodrail control plane, self-hosted or Nodrail Cloud. Each wrapped tool call is allowed or denied before it runs.",
   "keywords": [
     "ai",
@@ -18,18 +18,17 @@
     "sdk",
     "tool-permissions"
   ],
-  "homepage": "https://github.com/Nodrail/nodrail-js/tree/main/packages/client#readme",
+  "homepage": "https://github.com/Nodrail/nodrail/tree/main/packages/client#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nodrail/nodrail-js.git",
+    "url": "git+https://github.com/Nodrail/nodrail.git",
     "directory": "packages/client"
   },
   "bugs": {
-    "url": "https://github.com/Nodrail/nodrail-js/issues",
+    "url": "https://github.com/Nodrail/nodrail/issues",
     "email": "hello@nodrail.com"
   },
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

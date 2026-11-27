@@ -858,3 +858,19 @@ describe("the package boundary", () => {
     expect(text).not.toMatch(/from "(node:|yaml)/);
   });
 });
+
+test.each(["tool_calls", "tokens", "usd"] as const)(
+  "renders the %s budget limit as a fixed schema field",
+  (metric) => {
+    const original = ok(
+      compile(
+        `- required_engine_version: 3\n- budget: Cap\n  per: run\n  ${metric}: 2\n  otherwise: deny\n`,
+      ),
+    ).document;
+    expect(ok(compile(renderPolicies(original))).document).toEqual(original);
+    if (original.version !== 2) throw new Error("Expected a v2 document.");
+    const malformed = structuredClone(original);
+    Object.assign(malformed.budgets[0]!, { metric: "otherwise" });
+    expect(() => renderPolicies(malformed)).toThrow("Unknown budget metric.");
+  },
+);

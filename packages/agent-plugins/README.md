@@ -1,16 +1,23 @@
 # Nodrail plugins for Claude Code and Codex
 
+The [marketplace](https://github.com/Nodrail/agent-plugins) is generated from
+[Nodrail/nodrail](https://github.com/Nodrail/nodrail). Open issues and pull
+requests in [the Nodrail monorepo](https://github.com/Nodrail/nodrail/issues).
+
 Check supported tool calls against the policy in your Nodrail control plane, self-hosted or Nodrail Cloud, before they run. Each call is allowed or denied at once, with the reason; nothing waits for a person. Your team keeps the agent runtime and provider credentials.
 
-These plugins use a Nodrail workspace credential and send each call to the control plane through its host API. To set up hosts from a repository instead, with the policy decided on the machine, declare them in `nodrail.yaml` and run `nodrail plan` and `nodrail apply` ([`@nodrail/cli`](https://www.npmjs.com/package/@nodrail/cli)). For Codex, use the plugin below and review its activation and startup behavior under **When something goes wrong**.
+These plugins use a Nodrail workspace credential and send each call to the control plane through its host API. To set up hosts from a repository instead, with the policy decided on the machine, declare them in `nodrail.yaml` and run `nodrail plan` and `nodrail apply` ([`@nodrail/cli`](https://www.npmjs.com/package/@nodrail/cli)). The project workflow supports Claude Code, Codex and GitHub Copilot CLI. For an existing plugin setup, follow the [upgrade to a repository connection](https://nodrail.com/docs/cli#upgrade-to-connect).
 
 [![Check plugins](https://github.com/Nodrail/agent-plugins/actions/workflows/ci.yml/badge.svg)](https://github.com/Nodrail/agent-plugins/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Nodrail/agent-plugins/badge)](https://scorecard.dev/viewer/?uri=github.com/Nodrail/agent-plugins)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16693/badge)](https://www.bestpractices.dev/projects/16693)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/Nodrail/agent-plugins/blob/main/LICENSE)
 
-Start in Nodrail: **Agents → Connect an agent**, and copy the credential. It is
-shown once.
+Start in Nodrail under **Agents → Connect a project**. The console shows the
+CLI commands and the connection settings for your environment. For a standalone
+Claude Code or SDK installation, open **Standalone plugin, manual hook or SDK**
+and create a credential. The console shows it once, along with the server
+address and host-specific steps.
 
 Both plugins run their hook with Node.js 22 or later, which must be on your
 `PATH`. On Windows the hook passes its tests, but hasn't been tried in the real
@@ -25,30 +32,21 @@ Needs Claude Code 2.1.295 or later.
 /plugin install nodrail@nodrail
 ```
 
-Claude Code asks for the credential and keeps it in your system's secure store.
-That's all. To change it later: `/plugin configure nodrail@nodrail`. A
-`NODRAIL_CREDENTIAL` set in your shell takes precedence over the saved one.
+Claude Code asks for the credential and its issuing origin. For Nodrail Cloud, enter `https://app.nodrail.com`. To change the pair, run `/plugin configure nodrail@nodrail`.
 
-Self-hosting? Set the address in the same prompt.
+When `nodrail apply` installs a Claude Code project hook and verifies it against the user's private apply record, the standalone plugin steps aside. Start a new session after apply so it loads the project hook. Set `NODRAIL_REQUIRE_STANDALONE=1` in the host environment to keep the standalone plugin active.
 
 ## Codex
 
-Needs Codex 0.155 or later.
+For project setup, use Codex 0.169.0 or later. In **Agents → Connect a project**, choose **Codex**.
+With Nodrail CLI 0.7.0 or later and a matching control plane, sign in with
+`nodrail login`, point `nodrail.yaml` at your environment, and run
+`nodrail apply --runtime codex`. Apply enrolls the machine for that project
+and environment, with a credential bound to the control plane's origin.
 
-```sh
-codex plugin marketplace add Nodrail/agent-plugins
-codex plugin add nodrail@nodrail
-
-# Save the credential once, for every session on this machine.
-# Paste it, press Enter, then Ctrl-D. It stays out of your shell history.
-mkdir -p ~/.nodrail && (umask 077; cat > ~/.nodrail/credential)
-```
-
-Start Codex and approve the Nodrail hooks in `/hooks`. Codex doesn't run new
-hooks until you do, so **nothing is checked before that step**.
-
-To use a different credential for one project, set `NODRAIL_CREDENTIAL` there.
-Self-hosting? Also set `NODRAIL_URL`.
+Open Codex in the project, trust the folder, then trust the Nodrail hook in
+`/hooks`. Use the console's check-in command and Activity link to verify
+that the hook reported a decision.
 
 ## What is checked
 
@@ -81,7 +79,7 @@ allows it, each start is denied.
 For a subagent to report a verdict, end its definition (for example
 `.claude/agents/qa.md`) with an instruction to finish its final message with a
 `nodrail-receipt` block, such as `verdict: pass`, and nothing after it. See
-[Runs, gates and budgets (preview)](https://github.com/Nodrail/nodrail-js/blob/main/packages/policy-engine/docs/runs.md#receipts).
+[Runs, gates and budgets (preview)](https://github.com/Nodrail/nodrail/blob/main/packages/policy-engine/docs/runs.md#receipts).
 
 A patch that touches several files, or renames one, is its own operation (tool
 `files`, operation `file.patch`), so a rule for one folder can't let a second
@@ -121,18 +119,19 @@ person.
 ## Turning it off
 
 - **Claude Code:** `/plugin disable nodrail@nodrail`, or `/plugin uninstall nodrail@nodrail`.
-- **Codex:** `codex plugin remove nodrail@nodrail`. Delete `~/.nodrail/credential`
-  if no other agent uses it.
+- **Codex project setup:** run `nodrail destroy --runtime codex` from the project.
+- **Existing standalone Codex plugin:** run `codex plugin remove nodrail@nodrail`.
 
 ## How it's built
 
 Both plugins run the same file, `hooks/nodrail-hook.mjs`: the hook from
-[`@nodrail/client`](https://github.com/Nodrail/nodrail-js/tree/main/packages/client),
+[`@nodrail/client`](https://github.com/Nodrail/nodrail/tree/main/packages/client),
 bundled into one file with no dependencies so nothing else needs installing. Its
 source, tests and changelog live there. `node scripts/check.mjs` checks that the
 manifests agree and that the hook blocks when it isn't configured.
 
-Versions are tagged here as `v<version>`, with a GitHub release for each.
+Plugin versions follow the client. See the
+[Nodrail releases](https://github.com/Nodrail/nodrail/releases).
 
 Two checks run in CI. One proves the hook is byte for byte the one in
 `@nodrail/client` of the same version on npm. The other, run on demand once
@@ -143,10 +142,8 @@ one doesn't, and `.env` stays hidden.
 
 ## Contributing and security
 
-Changes to the hook itself go to
-[Nodrail/nodrail-js](https://github.com/Nodrail/nodrail-js). For the plugin
-manifests and this README, see [CONTRIBUTING.md](https://github.com/Nodrail/agent-plugins/blob/main/CONTRIBUTING.md). Please report
-vulnerabilities privately, as [SECURITY.md](https://github.com/Nodrail/agent-plugins/blob/main/SECURITY.md) describes.
+See the [contributing guide](https://github.com/Nodrail/nodrail/blob/main/CONTRIBUTING.md).
+Report vulnerabilities privately via the [security policy](https://github.com/Nodrail/nodrail/blob/main/SECURITY.md).
 
 ## License
 

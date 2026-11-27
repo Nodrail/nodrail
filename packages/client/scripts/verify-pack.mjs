@@ -180,12 +180,14 @@ export const wrong: string = guard((n: number) => String(n), { name: "f" })(1);
       `the installed hook did not block: ${unconfigured.stdout}${unconfigured.stderr}`,
     );
 
-  // Runs on every tool call, so it carries no schema or YAML library.
+  // Runs on every tool call, so it carries no schema or YAML library (the
+  // markers below). The byte budget catches any other large dependency; it
+  // was raised from 80,000 when descriptor-checked file reads were added.
   const bundled = readFileSync(
     join(folder, "node_modules/@nodrail/client/dist/nodrail-hook.mjs"),
     "utf8",
   );
-  if (Buffer.byteLength(bundled) > 80_000)
+  if (Buffer.byteLength(bundled) > 82_000)
     fail(`the hook grew to ${Buffer.byteLength(bundled)} bytes`);
   for (const marker of ["ZodError", "YAMLParseError"])
     if (bundled.includes(marker)) fail(`the hook bundles ${marker}`);

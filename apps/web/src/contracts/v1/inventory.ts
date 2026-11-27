@@ -64,6 +64,10 @@ export const publishRevisionInput = z
     /** The project's stable id: a revision is never published by name. */
     project_id: z.uuid(),
     project: z.string().min(1).max(200),
+    entry_agent: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9_-]{0,62}$/)
+      .optional(),
     revision: digest,
     policy_revision: digest.nullable().default(null),
     files: z
@@ -98,6 +102,7 @@ export const publishRevisionInput = z
 export type IntendedRevisionDto = {
   projectId: string;
   project: string;
+  entryAgent?: string;
   revision: string;
   policyRevision: string | null;
   files: { path: string; sha256: string }[];
@@ -115,7 +120,8 @@ export type InventoryRowDto = {
   projectBound: boolean;
   host: string;
   agent: string | null;
-  activation: "verified" | "configured" | "inactive" | "unknown";
+  activation:
+    "verified" | "configured" | "inactive" | "unknown" | "disconnected";
   inStep: boolean;
   drift: number;
   unmanaged: Record<string, number>;
@@ -149,6 +155,7 @@ export type InventoryDto = {
     inactive: number;
     /** The installation couldn't tell. */
     unknown: number;
+    disconnected: number;
     stale: number;
     drifted: number;
     behind: number;

@@ -5,10 +5,16 @@ import { StatusBadge } from "@/components/app/status-badge";
 import { focusRing } from "@/components/app/styles";
 import { adapterLabel, type AgentListItemDto } from "@/contracts/v1/agents";
 import { cn } from "@/lib/utils";
-import { agentBadge, checkInSummary, toolLabels } from "../presentation";
+import {
+  agentBadge,
+  agentProject,
+  checkInSummary,
+  toolLabels,
+} from "../presentation";
 import { RowActions } from "@/components/app/row-actions";
 import { accessConfirm } from "../access-confirm";
 import { AgentAvatar } from "./agent-avatar";
+import { AgentMachines } from "./agent-machines";
 
 function RowMeta({ children }: { children: ReactNode }) {
   return (
@@ -31,6 +37,9 @@ function AgentActions({
   agent: AgentListItemDto;
   canManage: boolean;
 }) {
+  const machine = agent.installations.find(
+    ({ machineKey }) => machineKey === agent.key,
+  );
   const key = encodeURIComponent(agent.key);
   const paused = agent.access.status === "paused";
   return (
@@ -45,15 +54,33 @@ function AgentActions({
           ? {
               label: paused ? "Resume…" : "Pause…",
               destructive: !paused,
-              confirm: accessConfirm(workspace, {
-                ...agent,
-                installations: [agent.installation],
-              }),
+              confirm: accessConfirm(
+                workspace,
+                agent,
+                machine
+                  ? { machine: machine.name }
+                  : { machinesHref: `${base}/agents#machines` },
+              ),
             }
           : null,
       ]}
     />
   );
+}
+
+function rowIdentity(agent: AgentListItemDto) {
+  const { installation } = agent;
+  const fallback = installation?.machineKey === agent.key;
+  return {
+    name: fallback ? `Unidentified callers on ${installation.name}` : agent.key,
+    badge:
+      fallback && installation.disconnected
+        ? { tone: "neutral" as const, label: "Disconnected" }
+        : agentBadge(
+            agent.access.status,
+            installation?.reporting ?? "never_reported",
+          ),
+  };
 }
 
 /** One agent in the list: a link to its page, with its waiting requests beside it. */
@@ -71,47 +98,61 @@ export function AgentRow({
   base: string;
   canManage: boolean;
 }) {
-  const badge = agentBadge(agent.access.status, agent.installation.reporting);
+  const { installation } = agent;
+  const { name, badge } = rowIdentity(agent);
+  const project = agentProject(agent);
   return (
-    <li
-      data-slot="agent-row"
-      className={cn(
-        boxedRow,
-        "transition-[border-color,transform,box-shadow] duration-150 focus-within:border-input hover:-translate-y-px hover:border-input hover:shadow-sm",
-      )}
-    >
-      <Link
-        href={href}
-        className={cn(boxedRowMain, "rounded-lg phone:pr-12", focusRing)}
+    <li data-slot="agent-row" className="min-w-0">
+      <div
+        className={cn(
+          boxedRow,
+          "transition-[border-color,transform,box-shadow] duration-150 focus-within:border-input hover:-translate-y-px hover:border-input hover:shadow-sm",
+        )}
       >
-        <AgentAvatar agentKey={agent.key} />
-        <span className="grid min-w-0 gap-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <strong className="truncate font-display text-sm font-bold text-foreground">
-              {agent.key}
-            </strong>
-            <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
+        <Link
+          href={href}
+          className={cn(boxedRowMain, "rounded-lg phone:pr-12", focusRing)}
+        >
+          <AgentAvatar agentKey={agent.key} />
+          <span className="grid min-w-0 gap-1">
+            <span className="flex min-w-0 items-center gap-2">
+              <strong className="truncate font-display text-sm font-bold text-foreground">
+                {name}
+              </strong>
+              <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
+            </span>
+            {project ? <RowMeta>{project}</RowMeta> : null}
+            {agent.description ? <RowMeta>{agent.description}</RowMeta> : null}
+            <RowMeta>
+              {installation ? (
+                <b className="font-semibold text-body">
+                  {adapterLabel(installation.adapterKey)}
+                  {" · "}
+                </b>
+              ) : null}
+              {agent.tools.length
+                ? `${toolLabels(agent.tools).join(", ")} · `
+                : ""}
+              {checkInSummary(installation?.lastSeenAt ?? null)}
+            </RowMeta>
           </span>
-          {agent.description ? <RowMeta>{agent.description}</RowMeta> : null}
-          <RowMeta>
-            <b className="font-semibold text-body">
-              {adapterLabel(agent.installation.adapterKey)}
-            </b>
-            {agent.tools.length
-              ? ` · ${toolLabels(agent.tools).join(", ")}`
-              : ""}
-            {` · ${checkInSummary(agent.installation.lastSeenAt)}`}
-          </RowMeta>
+        </Link>
+        <span className="pr-2.5 phone:absolute phone:top-2.5 phone:right-2 phone:pr-0">
+          <AgentActions
+            workspace={workspace}
+            base={base}
+            agent={agent}
+            canManage={canManage}
+          />
         </span>
-      </Link>
-      <span className="pr-2.5 phone:absolute phone:top-2.5 phone:right-2 phone:pr-0">
-        <AgentActions
+      </div>
+      {agent.project && agent.installations.length ? (
+        <AgentMachines
+          machines={agent.installations}
           workspace={workspace}
-          base={base}
-          agent={agent}
           canManage={canManage}
         />
-      </span>
+      ) : null}
     </li>
   );
 }

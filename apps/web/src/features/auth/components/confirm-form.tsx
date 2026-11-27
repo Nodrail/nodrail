@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/app/form-field";
 import { FieldError } from "@/components/app/note";
-import { authForm, retryMessage } from "./auth-form";
+import { authForm, signInProblem } from "./auth-form";
 import { confirmSignIn, type ConfirmState } from "../actions";
 import { SubmitButton } from "@/components/app/form-feedback";
 
@@ -19,6 +19,7 @@ export function ConfirmForm({
   reset?: boolean;
 }) {
   const [state, action, pending] = useActionState(confirmSignIn, initial);
+  const problem = signInProblem(state.status);
 
   if (state.status === "failed")
     return (
@@ -49,7 +50,7 @@ export function ConfirmForm({
           }
         />
       )}
-      {state.status === "retry" && <FieldError>{retryMessage}</FieldError>}
+      {problem && <FieldError>{problem}</FieldError>}
       <SubmitButton
         size="lg"
         className="w-full"

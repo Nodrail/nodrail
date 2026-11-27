@@ -12,6 +12,19 @@ import type { plan } from "./rule-files";
  * version written with where it came from, and audited.
  */
 
+export const policyCounts = ({
+  added,
+  changed,
+  removed,
+}: Pick<
+  Awaited<ReturnType<typeof plan>>,
+  "added" | "changed" | "removed"
+>) => ({
+  added: added.length,
+  changed: changed.length,
+  removed: removed.length,
+});
+
 /** Publishes a plan with no issues as one new version, unless it changes nothing. */
 export async function publishPlanned(
   context: WorkspaceContext,
@@ -19,13 +32,23 @@ export async function publishPlanned(
   planned: Awaited<ReturnType<typeof plan>>,
   origin: VersionOrigin = { managed: null, source: null },
 ): Promise<PolicyFileResultDto> {
-  const counts = {
-    added: planned.added.length,
-    changed: planned.changed.length,
-    removed: planned.removed.length,
-  };
+  return (
+    (await publishIfChanged(context, environmentId, planned, origin)) ?? {
+      policyRevision: planned.revision,
+      ...policyCounts(planned),
+    }
+  );
+}
+
+export async function publishIfChanged(
+  context: WorkspaceContext,
+  environmentId: string,
+  planned: Awaited<ReturnType<typeof plan>>,
+  origin: VersionOrigin,
+): Promise<PolicyFileResultDto | null> {
+  const counts = policyCounts(planned);
   if (await nothingToPublish(context, environmentId, counts, origin))
-    return { policyRevision: planned.revision, ...counts };
+    return null;
 
   const revision = planned.revision + 1;
   if (planned.runPolicy?.receipts)

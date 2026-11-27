@@ -9,5 +9,6 @@ if (!url)
 export default new DataSource({
   ...dataSourceOptions(url),
   migrations: ["src/server/db/migrations/*.ts"],
+  migrationsTransactionMode: "each",
   migrationsTableName: "nodrail_migrations",
 });

@@ -9,6 +9,9 @@ export default async function setup() {
   const { database, appRole, own } = appTestDatabase();
   if (own) await createTestDatabase(database, appRole);
   else await provisionTestDatabase(database, appRole);
+  execFileSync("pnpm", ["--filter", "@nodrail/cli", "build"], {
+    stdio: "ignore",
+  });
   execFileSync("pnpm", ["--filter", "@nodrail/client", "build"], {
     stdio: "ignore",
   });

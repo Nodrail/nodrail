@@ -31,7 +31,7 @@ import { ReportedByPerson } from "./reported-base";
 @Check("reported_events_host", `"host" ~ '^[a-z][a-z0-9-]{0,39}$'`)
 @Check(
   "reported_events_decision",
-  `("kind" = 'decision') = ("decision" IS NOT NULL) AND ("decision" IS NULL OR "decision" IN ('allow', 'deny'))`,
+  `("kind" = 'decision') = ("decision" IS NOT NULL) AND ("decision" IS NULL OR "decision" IN ('allow', 'deny', 'would_deny'))`,
 )
 @Check(
   "reported_events_run_event",

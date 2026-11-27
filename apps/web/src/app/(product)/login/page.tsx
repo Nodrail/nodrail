@@ -30,7 +30,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               Forgot password?
             </Link>
             {" · "}
-            <Link href="/signup">Create an account</Link>
+            <Link href={`/signup?next=${encodeURIComponent(next)}`}>
+              Create an account
+            </Link>
           </>
         ) : (
           <>

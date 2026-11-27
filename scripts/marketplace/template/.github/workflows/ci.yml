@@ -1,0 +1,38 @@
+name: Check plugins
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check plugins
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Manifests agree and the hook blocks when unconfigured
+        run: node scripts/check.mjs
+      - name: The hook is the one published in @nodrail/client
+        run: node scripts/verify-hook.mjs
+      # Exact versions with checksums, from tools/package-lock.json.
+      - name: Install the pinned checking tools
+        run: npm ci --prefix tools --no-audit --no-fund
+      - name: Claude Code accepts the marketplace and the plugin
+        run: |
+          tools/node_modules/.bin/claude plugin validate --strict .
+          tools/node_modules/.bin/claude plugin validate --strict plugins/claude-code
+      - name: Random events never get past the unconfigured hook
+        run: node tools/fuzz-hook.js

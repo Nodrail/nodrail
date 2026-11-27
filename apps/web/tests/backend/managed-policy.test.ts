@@ -13,6 +13,7 @@ import {
   readLiveVersion,
   readRuntimePolicy,
 } from "@/server/modules/policies/managed";
+import { readRepositoryProject } from "@/server/modules/policies/repository";
 import {
   applyPolicyFile,
   previewPolicyFile,
@@ -146,6 +147,35 @@ describe("a policy published from a repository", () => {
     await publish(w, RULES, source(randomUUID(), "a"));
     await publish(w, MORE);
     expect((await live(w)).managed).toBeNull();
+  });
+
+  test("a stale console rule review is refused and ownership survives the edit", async () => {
+    const w = await createWorkspace();
+    const project = randomUUID();
+    const create = (reviewedProjectId: string | null) =>
+      act(w, (context) =>
+        createRule(
+          { ...context, reviewedProjectId },
+          ENV,
+          ruleBody({ name: "Console rule" }),
+        ),
+      );
+
+    await publish(w, RULES, source(project, "a"));
+    const before = await versions(w);
+    await expect(create(null)).rejects.toMatchObject({
+      code: "REPOSITORY_CHANGED",
+    });
+    expect(await versions(w)).toBe(before);
+
+    await create(project);
+    expect((await live(w)).managed).toBeNull();
+    await expect(
+      act(w, (context) => readRepositoryProject(context, ENV)),
+    ).resolves.toMatchObject({ id: project });
+    await expect(
+      act(w, (context) => readRepositoryProject(context, "production")),
+    ).resolves.toBeNull();
   });
 
   test("the database refuses a half-named source", async () => {

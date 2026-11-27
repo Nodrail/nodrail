@@ -24,3 +24,4 @@ Guide: https://github.com/Nodrail/.github/blob/main/CONTRIBUTING.md
 - [ ] Tests cover the change; a way around a rule is replayed exactly
 - [ ] Docs, changelog or changeset updated if users would notice
 - [ ] No secrets, personal details or internal links
+- [ ] I signed off my commits under the DCO

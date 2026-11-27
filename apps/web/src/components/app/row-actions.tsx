@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmPrompt, type ConfirmProps } from "./confirm-dialog";
-import { useToast } from "./toast";
+import { useCopy } from "./use-copy";
 
 type Common = {
   label: string;
@@ -143,17 +143,6 @@ export function RowActions({
       )}
     </span>
   );
-}
-
-/** Copies text, and says in a toast whether it worked. */
-function useCopy() {
-  const toast = useToast();
-  return (text: string, copied = "Copied.") =>
-    navigator.clipboard.writeText(text).then(
-      () => toast(copied),
-      () =>
-        toast("Couldn't copy. Select the text and copy it instead.", "error"),
-    );
 }
 
 /** One menu item: a link, or a choice that runs once the menu closes. */

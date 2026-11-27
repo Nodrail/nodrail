@@ -17,7 +17,7 @@ import {
   type WorkspaceContext,
 } from "@/server/db/context";
 import {
-  AuditEvent,
+  ActionRequest,
   ClientReport,
   DecisionPermit,
   InstallationCredential,
@@ -252,14 +252,23 @@ describe("submitting an action", () => {
   test("a paused agent is denied, even with an allow rule", async () => {
     const { w, token } = await rig();
     await allowRule(w);
+    const actions = () =>
+      admin.getRepository(ActionRequest).countBy({ workspaceId: w.id });
+    const before = await actions();
     await owner(w, (context) => pauseAgent(context, "bot"));
-    await expect(submit(token)).resolves.toMatchObject({ code: "DENIED" });
-    expect(
-      await admin.getRepository(AuditEvent).countBy({
-        workspaceId: w.id,
-        decisionCode: "denied_agent_paused",
-      }),
-    ).toBe(1);
+    await expect(submit(token)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      detail: expect.stringContaining("bot"),
+    });
+    expect(await actions()).toBe(before + 1);
+    const { items } = await list(w.owner, w, { outcome: "denied" });
+    expect(items).toMatchObject([
+      {
+        code: "denied_agent_paused",
+        label: "Denied: bot paused",
+        action: { resource: "redacted", run: null },
+      },
+    ]);
   });
 
   test("the digests are the ones the client computes", async () => {

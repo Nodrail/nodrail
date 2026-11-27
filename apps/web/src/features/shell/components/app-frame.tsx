@@ -1,7 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import {
   clearAnalyticsWorkspace,
   setAnalyticsIdentity,
@@ -11,6 +16,10 @@ import type { GuidanceDto } from "@/contracts/v1/guidance";
 import type { WorkspaceViewDto } from "@/contracts/v1/workspaces";
 import { GuidanceProvider } from "@/features/guidance/components/guidance-provider";
 import { cn } from "@/lib/utils";
+import {
+  browserEnvironment,
+  rememberEnvironment,
+} from "../environment-preference";
 import { rememberSidebar } from "../sidebar-preference";
 import { Sidebar } from "./sidebar";
 import { Topbar, initials } from "./topbar";
@@ -29,9 +38,33 @@ export function pathBelow(prefix: string, pathname: string) {
     : null;
 }
 
+const subscribeEnvironment = () => () => {};
+
+function useCurrentEnvironment(
+  view: WorkspaceViewDto,
+  path: string,
+  initialEnvironment: string,
+) {
+  const managed = /^\/(account|settings)(\/|$)/.test(path);
+  const remembered = useSyncExternalStore(
+    subscribeEnvironment,
+    () => (managed ? browserEnvironment(view.slug) : undefined),
+    () => undefined,
+  );
+  const environmentSlug = view.environments.some(
+    (item) => item.slug === remembered,
+  )
+    ? (remembered ?? initialEnvironment)
+    : initialEnvironment;
+  useEffect(() => {
+    if (!managed) rememberEnvironment(view.slug, initialEnvironment);
+  }, [managed, view.slug, initialEnvironment]);
+  return environmentSlug;
+}
+
 export function AppFrame({
   view,
-  environmentSlug,
+  environmentSlug: initialEnvironment,
   guidance = {},
   usageBanner = null,
   plan = null,
@@ -52,6 +85,9 @@ export function AppFrame({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const search = useSearchParams();
+  const path = pathBelow(appPath(view.slug), pathname) ?? "";
+  const environmentSlug = useCurrentEnvironment(view, path, initialEnvironment);
   const phone = useIsPhone();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const drawer = useDrawer(pathname, phone);
@@ -71,7 +107,6 @@ export function AppFrame({
   }
 
   const base = appPath(view.slug, environmentSlug);
-  const path = pathBelow(appPath(view.slug), pathname) ?? "";
   // Settings and account pages are in no environment: they have no section.
   const section = pathBelow(`/${environmentSlug}`, path);
   // While the drawer is open, only it and its scrim can be reached.
@@ -113,6 +148,7 @@ export function AppFrame({
               environmentSlug={environmentSlug}
               path={path}
               section={section}
+              activitySearch={search?.toString() ?? ""}
               plan={plan}
               showBilling={showBilling}
               expanded={phone ? drawer.open : !collapsed}

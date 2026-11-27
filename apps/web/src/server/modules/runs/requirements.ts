@@ -119,6 +119,8 @@ export type EvidenceNeed = {
   contractDigest: string;
   /** The verifiers that binding names. */
   verifiers: string[];
+  /** Runtime reads are limited to verifiers in the project pin. */
+  projectScoped?: boolean;
 };
 
 type LatestEvidence = {
@@ -174,9 +176,17 @@ export async function evidenceShortfall(
      WHERE e.workspace_id = $1 AND e.environment_id = ANY($2::uuid[])
        AND e.evidence = $3 AND e.subject_revision = $4
        AND e.authority = 'authoritative'
+       AND ($5::text[] IS NULL OR (v.name = ANY($5) AND e.contract_digest = $6))
      ORDER BY e.seq DESC
      LIMIT 1`,
-    [scope.workspaceId, environmentIds, need.evidence, subject],
+    [
+      scope.workspaceId,
+      environmentIds,
+      need.evidence,
+      subject,
+      need.projectScoped ? need.verifiers : null,
+      need.contractDigest,
+    ],
   );
   if (!row) return status("no_event");
   if (!satisfiesAuthority(row.producer_class, need.authority))

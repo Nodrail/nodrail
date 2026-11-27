@@ -1,4 +1,5 @@
 import "server-only";
+import { callerStep, runtimeCaller } from "./caller";
 import { randomUUID } from "node:crypto";
 import {
   descriptorDigest,
@@ -25,7 +26,6 @@ import { holdOf, placeOf } from "@/server/modules/runs/history";
 import { enterRun } from "@/server/modules/runs/steps";
 import { activePolicy, initialFor, judge, readsRuns } from "./decide";
 import {
-  agentAccess,
   insertRequest,
   noteHold,
   observe,
@@ -40,7 +40,15 @@ import {
   type StatusRow,
 } from "./status";
 import { recordSubject } from "./subject";
-import { recordPolicyHeartbeat } from "./policy-revision";
+import {
+  recordPolicyHeartbeat,
+  requirePolicyOwnership,
+} from "./policy-revision";
+import {
+  pauseReplayDigest,
+  refuseSubmission,
+  recordServerPause,
+} from "./pause-decisions";
 import { touch } from "./touch";
 
 /**
@@ -52,7 +60,14 @@ async function replay(
   existing: StatusRow,
   digest: string,
 ) {
-  if (existing.descriptor_digest !== digest || existing.decided_by === "host")
+  const same = existing.pause_replay_digest
+    ? existing.pause_replay_digest === pauseReplayDigest(context, digest)
+    : existing.descriptor_digest === digest;
+  if (
+    !same ||
+    existing.decided_by === "host" ||
+    existing.agent_id !== context.agentId
+  )
     throw new AppError("IDEMPOTENCY_CONFLICT");
   await context.manager.query(
     `UPDATE nodrail.action_requests
@@ -72,13 +87,22 @@ export async function submitAction(
   rawKey: unknown,
   rawInput: unknown,
 ): Promise<ActionStatus> {
+  await requirePolicyOwnership(context);
   const key = parseInput(idempotencyKey, rawKey);
   const {
+    agent,
     adapter_version: adapterVersion,
     run: declared,
     ...descriptor
   } = parseInput(submitActionInput, rawInput);
-  const { agentId, environmentId } = context;
+  const caller = await runtimeCaller(context, agent);
+  context = caller.context;
+  if (caller.refusal)
+    return refuseSubmission(caller, {
+      key,
+      descriptor,
+      runKey: declared?.key,
+    });
   const digest = descriptorDigest(context.installationId, descriptor);
   await touch(context, adapterVersion);
 
@@ -89,15 +113,14 @@ export async function submitAction(
   const place = declared
     ? await enterRun(
         context,
-        { key: declared.key, step: declared.step },
+        { key: declared.key, step: callerStep(caller, declared.step) },
         readsRuns(policy),
       )
     : null;
   const decided = await judge(context, policy, descriptor, { place });
   const { policyVersionId, verdict } = decided;
-  const access = await agentAccess(context);
-  const evaluation = access.paused ? "denied" : initialFor[verdict.outcome];
-  const hold = access.paused ? null : holdOf(verdict);
+  const evaluation = initialFor[verdict.outcome];
+  const hold = holdOf(verdict);
 
   const id = randomUUID();
   const inserted = await insertRequest(context, {
@@ -107,7 +130,7 @@ export async function submitAction(
     descriptor,
     digest,
     policyVersionId,
-    accessEpoch: access.epoch,
+    accessEpoch: caller.epoch,
     evaluation,
     place,
     hold,
@@ -122,19 +145,15 @@ export async function submitAction(
   await consumeIntent(context);
   const held = noteHold(context, id, hold);
   // No rule covers it: denied, and said so, so a person can add one.
-  const unmatched = !access.paused && verdict.outcome === "none";
+  const unmatched = verdict.outcome === "none";
 
   if (evaluation === "denied")
     await recordRuntimeDecision(context, {
       eventType: "authorization.decided",
-      decisionCode: access.paused
-        ? "denied_agent_paused"
-        : unmatched
-          ? "denied_no_rule"
-          : "denied_by_rule",
+      decisionCode: unmatched ? "denied_no_rule" : "denied_by_rule",
       actionRequestId: id,
-      agentId,
-      environmentId,
+      agentId: context.agentId,
+      environmentId: context.environmentId,
       policyVersionId,
       matchedLogicalRuleId: verdict.matchedRuleId ?? undefined,
       payload: held,
@@ -177,13 +196,15 @@ function blocked(
  * version, and the run's history as it stands, so a builder that has started
  * again since then closes its gate again.
  */
+const descriptorOf = (row: StatusRow): ActionDescriptor => ({
+  tool: row.tool_key,
+  operation: row.operation_key,
+  resource: { kind: row.resource_kind, id: row.resource_id },
+  params: row.params_safe as ActionDescriptor["params"],
+});
+
 async function recheck(context: RuntimeContext, row: StatusRow) {
-  const descriptor = {
-    tool: row.tool_key,
-    operation: row.operation_key,
-    resource: { kind: row.resource_kind, id: row.resource_id },
-    params: row.params_safe as ActionDescriptor["params"],
-  };
+  const descriptor = descriptorOf(row);
   const policy = await activePolicy(context);
   const place = await placeOf(context, row.id, readsRuns(policy));
   return judge(context, policy, descriptor, {
@@ -243,9 +264,14 @@ export async function requestPermit(
   actionId: string,
   rawInput: unknown,
 ): Promise<PermitResponse> {
+  await requirePolicyOwnership(context);
   const input = parseInput(permitInput, rawInput);
-  const { manager, workspaceId, agentId, environmentId } = context;
-  await loadAction(context, actionId);
+  const action = await loadAction(context, actionId);
+  const { manager, workspaceId, environmentId } = context;
+  const caller = await runtimeCaller(context, action.agent_key);
+  const { agentId } = caller.context;
+  if (agentId !== action.agent_id) throw new AppError("FORBIDDEN");
+  context = caller.context;
   await manager.query(
     `SELECT 1 FROM nodrail.action_requests
      WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
@@ -258,8 +284,19 @@ export async function requestPermit(
   if (row.decided_by === "host") throw new AppError("DECIDED_ON_HOST");
   if (row.action_digest !== input.action_digest)
     throw new AppError("ACTION_CHANGED");
-  if (row.access_status === "paused")
-    return blocked(row, "DENIED", "agent_paused");
+  if (caller.refusal) {
+    const place = await placeOf(context, row.id, false);
+    await recordServerPause(caller, {
+      key: `pause-permit:${row.id}`,
+      descriptor: descriptorOf(row),
+      runKey: place?.key,
+    });
+    return blocked(
+      row,
+      "DENIED",
+      row.access_status === "paused" ? "agent_paused" : caller.refusal,
+    );
+  }
 
   const { code, reason } = toCode(row);
   if (code === "PERMIT_ISSUED") throw new AppError("PERMIT_ALREADY_ISSUED");
@@ -320,6 +357,9 @@ export async function reportOutcome(
 ): Promise<{ recorded: true }> {
   const input = parseInput(reportInput, rawInput);
   const row = await loadAction(context, actionId);
+  // Outcomes inherit the action's admitted identity even when host metadata
+  // is absent or changed after the tool ran.
+  context = { ...context, agentId: row.agent_id };
   if (input.permit_id) {
     const [permit]: unknown[] = await context.manager.query(
       `SELECT 1 FROM nodrail.decision_permits

@@ -1,3 +1,4 @@
+import { docsUrl } from "@/features/guidance/docs-url";
 import { EmptyState } from "@/components/app/card";
 import { Button } from "@/components/ui/button";
 import { loadWorkspaceView, readForPage } from "@/features/shell/load-view";
@@ -62,7 +63,7 @@ export async function RunPolicyTab({
           title={empty[kind].title}
           action={
             <Button asChild variant="outline">
-              <a href="/docs/runs">How runs work</a>
+              <a href={docsUrl("runs")}>How runs work</a>
             </Button>
           }
         >

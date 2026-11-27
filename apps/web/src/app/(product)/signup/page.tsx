@@ -5,7 +5,8 @@ import { AuthCard } from "@/features/auth/components/auth-card";
 import { SignInForm } from "@/features/auth/components/sign-in-form";
 import { emailConfigured } from "@/server/notifications/mailer";
 import { getPrincipal } from "@/server/auth/current";
-import { appPath } from "@/lib/product-path";
+import { safeNextPath } from "@/features/auth/next-path";
+import { docsUrl } from "@/features/guidance/docs-url";
 import { plans } from "@/contracts/v1/billing";
 import { deploymentMode } from "@/server/deployment";
 
@@ -22,30 +23,44 @@ const intro = () =>
 
 export const metadata: Metadata = { title: "Create a workspace" };
 
-export default async function SignupPage() {
-  if (await getPrincipal()) redirect(appPath());
+export default async function SignupPage({
+  searchParams,
+}: PageProps<"/signup">) {
+  const next = safeNextPath((await searchParams).next);
+  if (await getPrincipal()) redirect(next);
+  const invited = next.startsWith("/invite/");
   const emailEnabled = emailConfigured();
   return (
     <AuthCard
       eyebrow="The open control plane for AI agent development"
-      title="Start your workspace"
+      title={invited ? "Create an account to join" : "Start your workspace"}
       intro={
         emailEnabled
-          ? intro()
+          ? invited
+            ? "Verify your email to continue to your workspace invitation."
+            : intro()
           : "Ask your server administrator to create your account."
       }
       footer={
         <>
-          Already have a workspace? <Link href="/login">Sign in</Link>
+          Already have an account?{" "}
+          <Link href={`/login?next=${encodeURIComponent(next)}`}>Sign in</Link>
         </>
       }
     >
-      {emailEnabled && (
+      {emailEnabled ? (
         <SignInForm
-          next={appPath()}
+          next={next}
           method="verify"
           submitLabel="Continue with email"
         />
+      ) : (
+        <a
+          className="text-ui underline"
+          href={docsUrl("self-hosting#account-provisioning")}
+        >
+          Administrator account provisioning
+        </a>
       )}
     </AuthCard>
   );

@@ -17,10 +17,15 @@ export const POST = publicRoute(
   },
   (context, call) => {
     const body = parseInput(publishBody, call.body);
-    return applyPolicyFile(context, call.environment, body.yaml, {
-      revision: body.policy_revision,
-      fileDigest: body.file_digest,
-      managed: body.managed ?? null,
-    });
+    return applyPolicyFile(
+      { ...context, reviewedProjectId: body.reviewed_project_id },
+      call.environment,
+      body.yaml,
+      {
+        revision: body.policy_revision,
+        fileDigest: body.file_digest,
+        managed: body.managed ?? null,
+      },
+    );
   },
 );

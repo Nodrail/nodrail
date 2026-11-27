@@ -7,12 +7,12 @@
 // token. Retries send the same body, which Cloud answers idempotently.
 // Exit codes: 0 stored, 3 refused, 4 Cloud not reached.
 import { spawnSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { checkValue, PAYLOAD_BYTES } from "@nodrail/policy-engine/contracts";
 import { isUuid, visible } from "../api.ts";
 import { resolveUrl } from "../config.ts";
 import { CliError, UsageError, type Io } from "../io.ts";
+import { readBounded } from "../read-bounded.ts";
 import { contractOf, parseEvidenceArgs, short } from "./evidence-shared.ts";
 import { policyHere } from "./policy-here.ts";
 
@@ -87,12 +87,11 @@ function target(values: Values, io: Io) {
 
 /** The result file: one JSON object of at most 16 KiB. */
 function readValue(io: Io, path: string) {
-  const file = resolve(io.cwd, path);
-  if (statSync(file).size > PAYLOAD_BYTES.evidence)
-    throw new CliError(`${path} is over 16 KiB.`);
+  const bytes = readBounded(resolve(io.cwd, path), PAYLOAD_BYTES.evidence);
+  if (bytes === null) throw new CliError(`${path} is over 16 KiB.`);
   let value: unknown;
   try {
-    value = JSON.parse(readFileSync(file, "utf8"));
+    value = JSON.parse(bytes.toString("utf8"));
   } catch {
     throw new CliError(`${path} isn't JSON.`);
   }
@@ -170,17 +169,24 @@ async function answered(
   return SUBMIT_EXIT.stored;
 }
 
-export async function submit(rest: string[], io: Io) {
+export function parseSubmitArgs(rest: string[]) {
   const { values, positionals } = parseEvidenceArgs(rest);
   const [name, extra] = positionals;
   if (!name || extra !== undefined || !values.result)
     throw new UsageError(
       "Usage: nodrail evidence submit <name> --result <file> --workspace <id> -e <environment>",
     );
+  return { name, values, result: values.result };
+}
+
+export async function submitEvidence(
+  { name, values, result }: ReturnType<typeof parseSubmitArgs>,
+  io: Io,
+) {
   const { workspace, environment, key } = target(values, io);
   const document = policyHere({ cwd: io.cwd, home: io.home, ...values });
   const contract = contractOf(document, name, "externally-verified");
-  const value = readValue(io, values.result);
+  const value = readValue(io, result);
   // Cloud validates again against the published contract; this says early.
   const checked = checkValue(contract.shape, value, PAYLOAD_BYTES.evidence);
   if (checked.state === "invalid")

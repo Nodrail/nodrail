@@ -25,7 +25,7 @@ async function createToken(page: Page, base: string, name: string) {
   const dialog = page.getByRole("dialog", { name: "Create an API token" });
   await dialog.getByLabel("Name").fill(name);
   await expect(
-    dialog.getByText(/never give it to an agent/).first(),
+    dialog.getByText(/keep it away from governed agents/i),
   ).toBeVisible();
   await expect(dialog.getByRole("checkbox", { name: /decide/i })).toHaveCount(
     0,
@@ -35,6 +35,9 @@ async function createToken(page: Page, base: string, name: string) {
   await dialog.getByRole("button", { name: "Create token" }).click();
   const shown = page.getByLabel("API token", { exact: true });
   await expect(shown).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "API token ready" }),
+  ).toContainText("Effective now · read, rules:write");
   const secret = (await shown.textContent()) ?? "";
   expect(secret).toMatch(/^ndp_[0-9a-f]{12}_/);
   await expectCopied(page, secret);
@@ -58,6 +61,7 @@ test.describe("API tokens", () => {
       .locator("[data-slot=data-table] tbody tr")
       .filter({ hasText: "e2e laptop" });
     await expect(row).toContainText("read, rules:write");
+    await expect(row).toContainText("Never used");
     await expect(row).toContainText(`${secret.slice(0, 16)}_…`);
     expect(await page.content()).not.toContain(secret.slice(17));
 
@@ -71,6 +75,8 @@ test.describe("API tokens", () => {
     // The token reads what the rules decided; there is nothing to approve.
     const activity = await api(secret, "activity");
     expect(activity.status).toBe(200);
+    await page.reload();
+    await expect(row).not.toContainText("Never used");
     const { items } = (await activity.json()) as { items: unknown[] };
     expect(items.length).toBeGreaterThan(0);
     expect((await api(secret, "approvals")).status).toBe(404);

@@ -6,18 +6,32 @@ import { accessConfirm } from "../access-confirm";
 
 export function AccessControl({
   workspace,
+  base,
   agent,
 }: {
   workspace: string;
-  agent: Pick<AgentDetailDto, "key" | "access" | "installations">;
+  base: string;
+  agent: Pick<
+    AgentDetailDto,
+    "key" | "access" | "installations" | "project" | "entryAgent"
+  >;
 }) {
+  const machine = agent.installations.find(
+    ({ machineKey }) => machineKey === agent.key,
+  );
   const paused = agent.access.status === "paused";
   return (
     <ConfirmDialog
       key={paused ? "resume" : "pause"}
       triggerLabel={paused ? "Resume" : "Pause"}
       triggerVariant={paused ? "outline" : "danger-quiet"}
-      {...accessConfirm(workspace, agent)}
+      {...accessConfirm(
+        workspace,
+        agent,
+        machine
+          ? { machine: machine.name }
+          : { machinesHref: `${base}/agents#machines` },
+      )}
     />
   );
 }

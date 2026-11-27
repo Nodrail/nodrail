@@ -1,0 +1,51 @@
+name: Bug report
+description: A wrong decision, an error, or something that doesn't work
+labels: ["type: bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security problems don't belong here.** If an action that should be blocked can run, report it privately: see [SECURITY.md](../blob/main/SECURITY.md).
+  - type: dropdown
+    id: package
+    attributes:
+      label: Component
+      options:
+        - "@nodrail/client (SDK)"
+        - "@nodrail/client (hook for Claude Code or Codex)"
+        - "@nodrail/policy-engine"
+        - "@nodrail/cli"
+        - "@nodrail/mcp"
+        - "Claude Code or Codex plugin"
+        - "Server API"
+        - "Web console"
+        - "Shared web components"
+        - "Self-hosted deployment"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Package version, server release tag, or commit.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Node 24 and macOS, or self-hosted server with Docker Compose"
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: Include the smallest example that reproduces the problem. Remove credentials first.
+      render: typescript
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What you expected, and what happened
+    validations:
+      required: true

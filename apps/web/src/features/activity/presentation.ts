@@ -51,6 +51,8 @@ export function eventTitle(event: ActivityEventDto) {
 
 const explanations: Partial<Record<string, string>> = {
   allowed_by_rule: "Nodrail recorded an allow decision for this covered call.",
+  would_deny:
+    "Watch mode recorded what the policy would block and let the tool continue.",
   denied_by_rule:
     "Nodrail recorded a deny. The configured integration should keep this covered call blocked.",
   denied_no_rule:
