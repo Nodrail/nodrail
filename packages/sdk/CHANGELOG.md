@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0
+
+### Minor Changes
+
+- 43e93ee: `@nodrail/sdk` replaces `@nodrail/policy-engine` and `@nodrail/client`: one package with the same exports, subpaths and commands. Replace both imports with `@nodrail/sdk`.
+
 `@nodrail/sdk` continues `@nodrail/policy-engine` and `@nodrail/client`, which it
 replaces. Their changelogs up to 0.9.2 follow, and new versions go above.
 

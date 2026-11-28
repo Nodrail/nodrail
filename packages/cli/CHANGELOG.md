@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- 43e93ee: Depend on @nodrail/sdk.
+- Updated dependencies [43e93ee]
+  - @nodrail/sdk@0.10.0
+
 ## 0.8.0
 
 ### Minor Changes

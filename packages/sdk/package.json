@@ -1,6 +1,6 @@
 {
   "name": "@nodrail/sdk",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "description": "The Nodrail SDK: compile, test and evaluate agent rules locally, and check each tool call against your Nodrail control plane, self-hosted or Nodrail Cloud. Includes the nodrail-policy command and the Claude Code and Codex hook.",
   "keywords": [
     "ai",
