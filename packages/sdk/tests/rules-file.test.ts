@@ -856,7 +856,8 @@ describe("the package boundary", () => {
       for (const [, target = ""] of text.matchAll(/from "([^"]+)"/g)) {
         if (target.endsWith("package.json"))
           expect(resolve(dirname(join(source, file)), target)).toBe(manifest);
-        else if (peers[file]?.test(target)) continue;
+        // readdirSync names nested files with the platform's separator.
+        else if (peers[file.replaceAll("\\", "/")]?.test(target)) continue;
         else expect(target).toMatch(allowed);
       }
     },
