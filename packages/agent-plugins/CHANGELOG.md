@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+
+- Ship the hook from `@nodrail/sdk` 0.10.0, which replaces `@nodrail/client`. Same hook, same behaviour.
+
 ## 0.9.2
 
 - Rebuild both plugin hooks with the 0.9.2 client: local secret files are read through a checked file descriptor, receipt and Markdown parsing no longer backtrack, and telemetry writes its status atomically and refuses redirects.

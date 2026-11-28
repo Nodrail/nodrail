@@ -30,7 +30,7 @@ them.
 
 The hook in `plugins/*/hooks/` is built from
 [@nodrail/sdk](https://github.com/Nodrail/nodrail/tree/main/packages/sdk).
-Each plugin version equals the `@nodrail/client` version it ships, and CI
+Each plugin version equals the `@nodrail/sdk` version it ships, and CI
 checks that the file is byte for byte the one in that version on npm, which
 carries provenance from GitHub Actions. See [GOVERNANCE.md](GOVERNANCE.md) for
 how changes and releases are reviewed.

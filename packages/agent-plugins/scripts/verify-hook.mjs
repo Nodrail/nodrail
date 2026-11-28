@@ -1,4 +1,4 @@
-// Proves the hook these plugins ship is exactly the one in @nodrail/client of
+// Proves the hook these plugins ship is exactly the one in @nodrail/sdk of
 // the same version on npm, and that npm's signatures for that package check
 // out. A stale or altered hook can't pass. Needs the network and npm.
 import { execFileSync } from "node:child_process";
@@ -14,14 +14,14 @@ const { version } = JSON.parse(
     "utf8",
   ),
 );
-const spec = `@nodrail/client@${version}`;
+const spec = `@nodrail/sdk@${version}`;
 // CI runs the agents against the client tools/package-lock.json pins.
 const pinned = JSON.parse(
   readFileSync(join(root, "tools/package-lock.json"), "utf8"),
-).packages["node_modules/@nodrail/client"]?.version;
+).packages["node_modules/@nodrail/sdk"]?.version;
 if (pinned !== version)
   throw new Error(
-    `tools/package-lock.json pins @nodrail/client ${pinned}, not ${version}. Run npm install @nodrail/client@${version} --save-exact in tools.`,
+    `tools/package-lock.json pins @nodrail/sdk ${pinned}, not ${version}. Run npm install @nodrail/sdk@${version} --save-exact in tools.`,
   );
 const folder = mkdtempSync(join(tmpdir(), "nodrail-hook-"));
 const npm = (args) =>
@@ -43,7 +43,7 @@ try {
   console.log(npm(["audit", "signatures"]).trim());
 
   const published = readFileSync(
-    join(folder, "node_modules/@nodrail/client/dist/nodrail-hook.mjs"),
+    join(folder, "node_modules/@nodrail/sdk/dist/nodrail-hook.mjs"),
   );
   for (const plugin of ["claude-code", "codex"]) {
     const shipped = readFileSync(

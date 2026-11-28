@@ -1,5 +1,5 @@
 // A stand-in for Nodrail's runtime API, for running real agents in CI. It
-// answers like the service, with digests from the published @nodrail/client,
+// answers like the service, with digests from the published @nodrail/sdk,
 // so the hook checks every answer exactly as it would in production.
 //
 // Allows a shell command starting with "mkdir allowed"; denies everything else.
@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const { actionDigest, descriptorDigest } = await import(
-  pathToFileURL(join(process.env.NODRAIL_CLIENT_DIR ?? "", "dist/protocol.js"))
+  pathToFileURL(join(process.env.NODRAIL_SDK_DIR ?? "", "dist/protocol.js"))
     .href
 );
 
