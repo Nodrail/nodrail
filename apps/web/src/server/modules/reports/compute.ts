@@ -6,7 +6,7 @@ import {
   type PolicyBudget,
   type PolicyGate,
   type Requirement,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 import type {
   AgentReportDto,
   BudgetReportDto,

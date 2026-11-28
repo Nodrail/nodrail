@@ -1,4 +1,4 @@
-import { decodeSpans } from "@nodrail/policy-engine";
+import { decodeSpans } from "@nodrail/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { MAX_OTLP_BODY_BYTES } from "@/contracts/v1/inventory";
 import { AppError } from "@/server/db/context";

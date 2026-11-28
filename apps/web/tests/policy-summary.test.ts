@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { PolicyBudget, RunEvent } from "@nodrail/policy-engine";
+import type { PolicyBudget, RunEvent } from "@nodrail/sdk";
 import {
   impactText,
   ruleSummary,

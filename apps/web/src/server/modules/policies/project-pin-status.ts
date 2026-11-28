@@ -1,5 +1,5 @@
 import "server-only";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import type { ProjectApply } from "@/contracts/v1/project-apply";
 import { AppError, type WorkspaceContext } from "@/server/db/context";
 

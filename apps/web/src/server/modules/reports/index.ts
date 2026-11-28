@@ -1,9 +1,5 @@
 import "server-only";
-import {
-  MAIN_AGENT,
-  type PolicyGate,
-  type Requirement,
-} from "@nodrail/policy-engine";
+import { MAIN_AGENT, type PolicyGate, type Requirement } from "@nodrail/sdk";
 import { z } from "zod";
 import type { ReportDto, ReportWindow } from "@/contracts/v1/reports";
 import { parseRows, type WorkspaceContext } from "@/server/db/context";

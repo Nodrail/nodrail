@@ -1,6 +1,6 @@
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ProjectSetup } from "@nodrail/policy-engine/yaml";
+import type { ProjectSetup } from "@nodrail/sdk/yaml";
 
 /** A file of the reviewed workspace, by project path, hashed as bytes. */
 export type Hashed = { path: string; sha256: string };

@@ -4,7 +4,7 @@ import {
   descriptorDigest,
   redactPausedAction,
   type ActionDescriptor,
-} from "@nodrail/client/protocol";
+} from "@nodrail/sdk/protocol";
 import {
   AppError,
   RecordedAccessDenial,

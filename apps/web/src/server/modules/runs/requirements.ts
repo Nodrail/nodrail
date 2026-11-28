@@ -8,7 +8,7 @@ import {
   type Requirement,
   type RunContext,
   type SimulationResult,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 import {
   explainRequirement,
   explainRunShortfall,

@@ -1,4 +1,4 @@
-import { starterPacks } from "@nodrail/policy-engine/yaml";
+import { starterPacks } from "@nodrail/sdk/yaml";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PolicyFileImport } from "@/features/policies/components/policy-file-import";

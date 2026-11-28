@@ -1,20 +1,20 @@
 import { launcher } from "./launcher.ts";
 import { randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
-import { pluginCalls } from "@nodrail/policy-engine/yaml";
+import { pluginCalls } from "@nodrail/sdk/yaml";
 import type {
   ConnectionSpec,
   ProjectSetup,
   SecretRef,
   SetupConnection,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import {
   hasSecret,
   readStatus,
   secretName,
   secretValue,
   spoolFolder,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import type { Env } from "../config.ts";
 import type { CompiledContracts } from "../contracts/engine.ts";
 import { commandForDisplay } from "../format.ts";

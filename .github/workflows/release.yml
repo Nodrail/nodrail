@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Immutable npm tag (for example @nodrail/client@0.8.1)
+        description: Immutable npm tag (for example @nodrail/sdk@0.10.0)
         type: string
         required: true
       operation:

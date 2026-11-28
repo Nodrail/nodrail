@@ -7,11 +7,7 @@ import { parseArgs } from "node:util";
 import type { CompiledContracts } from "../contracts/engine.ts";
 import { serveMediatedProxy } from "../connectors/mcp-proxy.ts";
 import { serveMcp, type Tool } from "../connectors/mcp-stdio.ts";
-import {
-  record,
-  settleMediatedCall,
-  withRunLock,
-} from "@nodrail/policy-engine/ledger";
+import { record, settleMediatedCall, withRunLock } from "@nodrail/sdk/ledger";
 import { ledgerPlace, ledgerSink } from "../connectors/ledger-sink.ts";
 import { mediateTools, recordsFile } from "../connectors/mediate.ts";
 import { outboxTool } from "../connectors/outbox.ts";

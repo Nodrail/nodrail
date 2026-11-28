@@ -214,7 +214,7 @@ test.describe("the connect page", () => {
     await page.getByRole("radio", { name: /TypeScript SDK/ }).check();
     await page.getByRole("button", { name: "Create credential" }).click();
     await expect(page.getByLabel("Install the SDK")).toContainText(
-      "npm install @nodrail/client",
+      "npm install @nodrail/sdk",
     );
     await expect(page.getByLabel("Framework example")).toContainText(
       "guard(tools)",

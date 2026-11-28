@@ -3,14 +3,14 @@ import {
   limitsOf,
   type NumericBudget,
   type PolicyDocument,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 import {
   covers,
   dayWindow,
   explainLimit,
   type LimitState,
-} from "@nodrail/policy-engine/ledger";
-import type { ActionDescriptor } from "@nodrail/client/protocol";
+} from "@nodrail/sdk/ledger";
+import type { ActionDescriptor } from "@nodrail/sdk/protocol";
 import type { EntityManager } from "typeorm";
 import { UNKNOWN_AFTER_MINUTES } from "@/contracts/v1/budgets";
 import { AppError, type RuntimeContext } from "@/server/db/context";

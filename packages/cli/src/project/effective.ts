@@ -4,7 +4,7 @@ import {
   compilePolicies,
   renderPolicies,
   type PolicySource,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import { CliError } from "../io.ts";
 
 const HEADER = `# The effective policy of this project, exported by nodrail from

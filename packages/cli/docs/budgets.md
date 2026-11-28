@@ -1,6 +1,6 @@
 # Numeric budgets (engine level 5)
 
-A numeric budget is an **operational limit** on what agents do: calls of an operation, an amount in the calls' input, a measured result or subagent tokens. It is not your Nodrail bill. The grammar is the engine's ([`docs/contracts.md`](../../policy-engine/docs/contracts.md#numeric-budgets-enforced-engine-level-5), C03):
+A numeric budget is an **operational limit** on what agents do: calls of an operation, an amount in the calls' input, a measured result or subagent tokens. It is not your Nodrail bill. The grammar is the engine's ([`docs/contracts.md`](../../sdk/docs/contracts.md#numeric-budgets-enforced-engine-level-5), C03):
 
 ```yaml
 - required_engine_version: 5

@@ -1,5 +1,5 @@
-import { isPlainJson, type JsonValue } from "@nodrail/client/protocol";
-import { runContext, runEvent } from "@nodrail/policy-engine";
+import { isPlainJson, type JsonValue } from "@nodrail/sdk/protocol";
+import { runContext, runEvent } from "@nodrail/sdk";
 import { z } from "zod";
 import { resourceScope, ruleInput } from "./policies";
 

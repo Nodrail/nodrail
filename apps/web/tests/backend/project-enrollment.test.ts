@@ -42,8 +42,8 @@ import { runtimeCaller } from "@/server/modules/runtime/caller";
 import { reserveSharedBudgets } from "@/server/modules/budgets/host";
 import { runtimeEvidenceStatus } from "@/server/modules/evidence/status";
 import { createVerifier } from "@/server/modules/evidence/verifiers";
-import { evidencePins } from "@nodrail/policy-engine/command-line";
-import { compilePolicies } from "@nodrail/policy-engine/yaml";
+import { evidencePins } from "@nodrail/sdk/command-line";
+import { compilePolicies } from "@nodrail/sdk/yaml";
 import { getIntendedRevision } from "@/server/modules/inventory/revisions";
 import {
   readLiveVersion,

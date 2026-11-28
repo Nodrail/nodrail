@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import {
   MAX_STORED_ISSUES,
   surfaceCoverage,

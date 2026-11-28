@@ -8,7 +8,7 @@
 // Exit codes: 0 stored, 3 refused, 4 Cloud not reached.
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import { checkValue, PAYLOAD_BYTES } from "@nodrail/policy-engine/contracts";
+import { checkValue, PAYLOAD_BYTES } from "@nodrail/sdk/contracts";
 import { isUuid, visible } from "../api.ts";
 import { resolveUrl } from "../config.ts";
 import { CliError, UsageError, type Io } from "../io.ts";

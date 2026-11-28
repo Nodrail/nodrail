@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { readHostCredential } from "@nodrail/policy-engine/command-line";
+import type { readHostCredential } from "@nodrail/sdk/command-line";
 import {
   ApiError,
   NodrailApi,

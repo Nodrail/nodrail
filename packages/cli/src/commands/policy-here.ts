@@ -3,8 +3,8 @@
 // one rule file with `--policy`. Offline, from files only.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { PolicyDocument } from "@nodrail/policy-engine";
-import { compilePolicies } from "@nodrail/policy-engine/yaml";
+import type { PolicyDocument } from "@nodrail/sdk";
+import { compilePolicies } from "@nodrail/sdk/yaml";
 import { CliError } from "../io.ts";
 import { frozenPolicy } from "./project.ts";
 

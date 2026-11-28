@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import type { Requirement } from "@nodrail/policy-engine";
+import type { Requirement } from "@nodrail/sdk";
 import {
   holdSummary,
   requirementLabel,

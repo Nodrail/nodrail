@@ -1,5 +1,5 @@
-import { evidencePins } from "@nodrail/policy-engine/command-line";
-import { compilePolicies } from "@nodrail/policy-engine/yaml";
+import { evidencePins } from "@nodrail/sdk/command-line";
+import { compilePolicies } from "@nodrail/sdk/yaml";
 import type { CompiledContracts, ResolvedShape } from "../contracts/engine.ts";
 import { CliError } from "../io.ts";
 

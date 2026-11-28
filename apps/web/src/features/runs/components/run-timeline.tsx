@@ -1,4 +1,4 @@
-import { MAIN_AGENT } from "@nodrail/policy-engine";
+import { MAIN_AGENT } from "@nodrail/sdk";
 import { StatusBadge } from "@/components/app/status-badge";
 import { requestReference } from "@/contracts/v1/requests";
 import { holdLabel } from "@/contracts/v1/glossary";

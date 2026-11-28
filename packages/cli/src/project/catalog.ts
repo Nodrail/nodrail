@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Catalog, CatalogModule } from "@nodrail/policy-engine/yaml";
+import type { Catalog, CatalogModule } from "@nodrail/sdk/yaml";
 import { parse } from "yaml";
 
 /** The package's catalog folder, from the source tree or the built file. */

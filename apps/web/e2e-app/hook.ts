@@ -7,7 +7,7 @@ import { connect, startWorkspace } from "./helpers";
 
 const hookFile = resolve(
   process.cwd(),
-  "../../packages/client/dist/nodrail-hook.mjs",
+  "../../packages/sdk/dist/nodrail-hook.mjs",
 );
 export const server = "http://127.0.0.1:3201";
 
@@ -15,7 +15,7 @@ export const server = "http://127.0.0.1:3201";
 export const clientVersion = (
   JSON.parse(
     readFileSync(
-      resolve(process.cwd(), "../../packages/client/package.json"),
+      resolve(process.cwd(), "../../packages/sdk/package.json"),
       "utf8",
     ),
   ) as { version: string }

@@ -7,7 +7,7 @@ covers the checks and conventions.
 
 Edit manifests, marketplace definitions and the README in
 `packages/agent-plugins`. The generated `plugins/*/hooks/nodrail-hook.mjs`
-files come from `packages/client`. Run `pnpm --filter @nodrail/agent-plugins test`
+files come from `packages/sdk`. Run `pnpm --filter @nodrail/agent-plugins test`
 from the monorepo to build and check both plugins.
 
 To try your own build, add `packages/agent-plugins` as a local marketplace in

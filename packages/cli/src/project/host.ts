@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import type { ProjectHost } from "@nodrail/policy-engine/yaml";
+import type { ProjectHost } from "@nodrail/sdk/yaml";
 
 const missing = (error: unknown) =>
   (error as NodeJS.ErrnoException).code === "ENOENT";

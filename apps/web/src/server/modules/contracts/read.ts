@@ -1,5 +1,5 @@
 import "server-only";
-import type { JsonValue } from "@nodrail/client/protocol";
+import type { JsonValue } from "@nodrail/sdk/protocol";
 import { z } from "zod";
 import { seesWholeWorkspace } from "@/contracts/v1/access";
 import {

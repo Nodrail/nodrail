@@ -1,4 +1,4 @@
-import type { LimitState } from "@nodrail/policy-engine/ledger";
+import type { LimitState } from "@nodrail/sdk/ledger";
 import { z } from "zod";
 import {
   idempotencyKey,

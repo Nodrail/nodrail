@@ -1,5 +1,5 @@
 import "server-only";
-import type { ReceivedSpans } from "@nodrail/policy-engine";
+import type { ReceivedSpans } from "@nodrail/sdk";
 import {
   UNMANAGED_PREFIX,
   observationAttributes,

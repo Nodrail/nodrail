@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { compilePolicies } from "@nodrail/policy-engine/yaml";
+import { compilePolicies } from "@nodrail/sdk/yaml";
 import {
   readWorkspace,
   withWorkspace,

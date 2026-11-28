@@ -3,7 +3,7 @@ import {
   type BudgetLabel,
   type LimitState,
   type NumericBudget,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 import { z } from "zod";
 
 // Numeric budgets in Cloud (C03, Wave 3): the shared online authority.

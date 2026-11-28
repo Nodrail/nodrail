@@ -6,7 +6,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { spoolFolder } from "@nodrail/policy-engine/command-line";
+import { spoolFolder } from "@nodrail/sdk/command-line";
 import { TELEMETRY_FILE } from "../src/setup/connections.ts";
 import { lastObservation, observationFile } from "../src/setup/observe.ts";
 import { fakeIo } from "./support/fake-io.ts";

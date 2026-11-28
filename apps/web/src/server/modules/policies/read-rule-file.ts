@@ -1,5 +1,5 @@
 import "server-only";
-import type { PolicyDocument, PolicyGate } from "@nodrail/policy-engine";
+import type { PolicyDocument, PolicyGate } from "@nodrail/sdk";
 import { requireCapability, type WorkspaceContext } from "@/server/db/context";
 import { ActivePolicy } from "@/server/db/entities";
 import { findEnvironment } from "@/server/modules/workspaces";

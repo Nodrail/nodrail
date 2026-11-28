@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @nodrail/client build && node scripts/build.mjs",
+    "build": "pnpm --filter @nodrail/sdk build && node scripts/build.mjs",
     "test": "pnpm build && node scripts/check.mjs && vitest run",
     "check": "node scripts/check.mjs"
   },
   "devDependencies": {
-    "@nodrail/client": "workspace:^",
+    "@nodrail/sdk": "workspace:^",
     "vitest": "^5.1.0"
   },
   "license": "Apache-2.0"

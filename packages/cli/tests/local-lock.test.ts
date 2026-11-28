@@ -15,7 +15,7 @@ import { promisify } from "node:util";
 import {
   readHostCredential,
   writeHostCredential,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import { holdProjectAsync } from "../src/project/store.ts";
 import { expect, test } from "vitest";
 
@@ -107,7 +107,7 @@ test.skipIf(process.platform === "win32")(
     const home = mkdtempSync(join(tmpdir(), "nodrail-stopped-"));
     const folder = join(home, "enrollment");
     const library = new URL("../src/project/store.ts", import.meta.url).href;
-    const engine = import.meta.resolve("@nodrail/policy-engine/command-line");
+    const engine = import.meta.resolve("@nodrail/sdk/command-line");
     const previous = {
       origin: "https://nodrail.example",
       workspace: "acme",

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { encodeSpans } from "../../../packages/policy-engine/src/otlp";
+import { encodeSpans } from "../../../packages/sdk/src/otlp";
 import { expectAccessible, startWorkspace, workspacePage } from "./helpers";
 import { server } from "./hook";
 

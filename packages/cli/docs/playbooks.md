@@ -1,6 +1,6 @@
 # Playbooks
 
-> **Preview.** Playbooks need `@nodrail/cli` 0.1.0 or later. Modules with gates need engine feature level 3: see [Runs, gates and budgets (preview)](../../policy-engine/docs/runs.md).
+> **Preview.** Playbooks need `@nodrail/cli` 0.1.0 or later. Modules with gates need engine feature level 3: see [Runs, gates and budgets (preview)](../../sdk/docs/runs.md).
 
 A playbook is a policy for one way of working, packaged so a repository can add it by name: "a publisher agent may open a draft pull request once QA and review passed", or "a triage agent may label issues and nothing else". You add it with `nodrail`, give it your values, review what it permits, and commit the result. Your agents follow it once you activate an export of it.
 
@@ -193,7 +193,7 @@ nodrail policy validate effective.yaml.tmp
 mv effective.yaml.tmp effective.yaml
 ```
 
-A pull request that changes `nodrail.yaml` or a local file without running `nodrail policy lock` fails here, with the reason. To check expected decisions too, run [`nodrail policy test`](../../policy-engine/docs/cli.md#test) against the export with a cases file.
+A pull request that changes `nodrail.yaml` or a local file without running `nodrail policy lock` fails here, with the reason. To check expected decisions too, run [`nodrail policy test`](../../sdk/docs/cli.md#test) against the export with a cases file.
 
 ## The catalog
 
@@ -253,7 +253,7 @@ Permissions:
                         security's commands no longer count as changing the work for the other requirements
 ```
 
-The same `override` can replace a field, such as `otherwise`, or append to a rule's `condition` or `tags`. A replacement can weaken a module's deny or gate: the review marks it `!`. See [Layering files](../../policy-engine/docs/rules.md#layering-files) for every form.
+The same `override` can replace a field, such as `otherwise`, or append to a rule's `condition` or `tags`. A replacement can weaken a module's deny or gate: the review marks it `!`. See [Layering files](../../sdk/docs/rules.md#layering-files) for every form.
 
 ## Give the roles to your agents (preview)
 
@@ -650,7 +650,7 @@ Any other version is unverified, not refused: `?` doesn't block `apply`, and it 
 
 Agents follow a playbook only through an enforcement point that reads the export. Which one depends on the calls the playbook covers.
 
-**File and shell rules** work with the local Claude Code hook today. That covers `@nodrail/read-only` and the file part of `@nodrail/dependency-updates`. Point the hook from [Write and test rules locally](../../policy-engine/docs/getting-started.md#connect-claude-code) at the export:
+**File and shell rules** work with the local Claude Code hook today. That covers `@nodrail/read-only` and the file part of `@nodrail/dependency-updates`. Point the hook from [Write and test rules locally](../../sdk/docs/getting-started.md#connect-claude-code) at the export:
 
 ```sh
 nodrail policy hook effective.yaml
@@ -658,13 +658,13 @@ nodrail policy hook effective.yaml
 
 `nodrail-policy hook effective.yaml` does the same. The hook blocks any call no rule covers, so the export needs rules for every shell and file call your agent makes. Import those with the module, such as your own rules file or `@nodrail/read-only`, rather than loading a second file next to the export.
 
-**GitHub rules** describe calls with tool `github`, operations such as `pr.open`, `pr.merge` or `issues.comment`, and resource kind `repository` with the id `owner/name`, as in the [policies guide](https://nodrail.com/docs/policies). They take effect only where an adapter maps your agents' GitHub calls to those names and supplies the run evidence the gates need: which candidate or head is being acted on, and the verdicts of QA, the checks and review for it. The local Claude Code hook doesn't map GitHub calls. An agent's own GitHub credentials don't go through these rules at all, so the merge and triage modules deny those agents the shell, where `gh` and `git push` would run. See [Runs, gates and budgets (preview)](../../policy-engine/docs/runs.md) for the evidence a gate reads.
+**GitHub rules** describe calls with tool `github`, operations such as `pr.open`, `pr.merge` or `issues.comment`, and resource kind `repository` with the id `owner/name`, as in the [policies guide](https://nodrail.com/docs/policies). They take effect only where an adapter maps your agents' GitHub calls to those names and supplies the run evidence the gates need: which candidate or head is being acted on, and the verdicts of QA, the checks and review for it. The local Claude Code hook doesn't map GitHub calls. An agent's own GitHub credentials don't go through these rules at all, so the merge and triage modules deny those agents the shell, where `gh` and `git push` would run. See [Runs, gates and budgets (preview)](../../sdk/docs/runs.md) for the evidence a gate reads.
 
 ## Limits
 
 - **Nothing runs until you activate an export.** `add`, `lock` and `export` change files and print text. They install no hook and govern no agent.
 - **A module is only as good as its enforcement point.** A GitHub module's guarantees cover the calls that go through a trusted adapter, with evidence that adapter supplies. Calls that bypass it aren't seen.
-- **Agent names are reported, not authenticated.** `github`, `merger` or `triage` are the names your integration gives the caller. Read [the security model](../../policy-engine/docs/security-model.md) before relying on them.
+- **Agent names are reported, not authenticated.** `github`, `merger` or `triage` are the names your integration gives the caller. Read [the security model](../../sdk/docs/security-model.md) before relying on them.
 - **Gates need engine level 3**, which is a preview. Receipts are self-reported: a gate proves a step reported a verdict, not that the work was good.
 - **With the local hook, checkers vouch for themselves.** The hook judges a subagent's call as the subagent Claude Code or Codex says made it, and the session's other calls as its `--agent`. A verdict, though, is whatever the checker's last message said. The modules stop the gated roles (`github`, `merger`, `deps`) from starting their own checkers, but a guarantee that QA, the checks and review really ran on the candidate needs an adapter that collects that evidence on the host, outside the agent's reach.
 - **Protect the policy itself.** Agents shouldn't be able to edit `nodrail.yaml`, `nodrail.lock.yaml`, the files they import, the resources and the agent definitions they set up, or the exported policy. A team set up with `nodrail apply` protects all of these from file tools; without one, the `repo-work` starter pack protects the first two; `nodrail policy lock` compares with the lock as last committed in git, so a change an agent made and locked shows up in the review.

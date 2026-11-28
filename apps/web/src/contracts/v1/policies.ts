@@ -9,7 +9,7 @@ export {
   type Effect,
   type ResourceScope,
   type RuleInput,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 
 import {
   legacySubagentRuleProblem,
@@ -18,7 +18,7 @@ import {
   type Effect,
   type ResourceScope,
   type RuleInput,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 
 /**
  * Why a rule can't be saved though it is well formed, or null: today, a rule

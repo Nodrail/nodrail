@@ -9,8 +9,7 @@ import { join } from "node:path";
 const NPM = "npm@12.2.2";
 const registry = "https://registry.npmjs.org";
 const packages = {
-  "@nodrail/policy-engine": "packages/policy-engine",
-  "@nodrail/client": "packages/client",
+  "@nodrail/sdk": "packages/sdk",
   "@nodrail/cli": "packages/cli",
 };
 

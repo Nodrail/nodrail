@@ -2,7 +2,7 @@
 
 > **Receipts, briefs and operation inputs are enforced by the hook.** `nodrail` accepts contracts in `nodrail.yaml`, locks them, writes them into the agent files `apply` generates, and gives them to the policy hook (engine level 4). On Claude Code and Copilot the hook reads each agent's final message against its receipt contract, and each dispatch's brief before the agent starts. On Codex nothing captures a receipt yet, so a gate that waits for one stays closed, and the hook can't read a dispatch prompt, so starting an agent that has a brief is denied. The hook checks a connection operation's `input` before any rule judges the call; the connection Nodrail runs checks it again, and the `output`, around the provider (see [connectors.md](connectors.md)). Rules and gates read the checked values with `where` on `input.` and `brief.` paths.
 
-The grammar (dialect 1) is the engine's: see [`@nodrail/policy-engine` docs/contracts.md](https://github.com/Nodrail/nodrail/blob/main/packages/policy-engine/docs/contracts.md) for every type, role, limit and digest. This page is what the CLI does with it.
+The grammar (dialect 1) is the engine's: see [`@nodrail/sdk` docs/contracts.md](https://github.com/Nodrail/nodrail/blob/main/packages/sdk/docs/contracts.md) for every type, role, limit and digest. This page is what the CLI does with it.
 
 ## What you can declare
 

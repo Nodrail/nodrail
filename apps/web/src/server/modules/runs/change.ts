@@ -1,6 +1,6 @@
 import "server-only";
-import { isChange } from "@nodrail/policy-engine";
-import type { ActionDescriptor } from "@nodrail/client/protocol";
+import { isChange } from "@nodrail/sdk";
+import type { ActionDescriptor } from "@nodrail/sdk/protocol";
 
 /**
  * Whether an action would change things if it went ahead, so gates' `since`

@@ -8,8 +8,7 @@ WORKDIR /repo
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 RUN pnpm fetch
 COPY apps/web/ apps/web/
-COPY packages/client/ packages/client/
-COPY packages/policy-engine/ packages/policy-engine/
+COPY packages/sdk/ packages/sdk/
 COPY packages/web-shared/ packages/web-shared/
 RUN pnpm install --frozen-lockfile --offline --filter @nodrail/web...
 

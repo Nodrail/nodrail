@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { starterPacks } from "@nodrail/policy-engine/yaml";
+import { starterPacks } from "@nodrail/sdk/yaml";
 import { EmptyState } from "@/components/app/card";
 import { PageTour } from "@/features/guidance/components/page-tour";
 import { PoliciesHeader } from "@/features/policies/components/policies-header";

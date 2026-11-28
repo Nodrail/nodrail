@@ -8,7 +8,7 @@ import type { StdioOptions } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { Readable, Writable } from "node:stream";
-import { connectionsField } from "@nodrail/policy-engine/yaml";
+import { connectionsField } from "@nodrail/sdk/yaml";
 import { z } from "zod";
 import type { Env } from "../config.ts";
 import type { CompiledContracts } from "../contracts/engine.ts";

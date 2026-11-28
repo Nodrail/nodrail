@@ -8,7 +8,7 @@ const dataDump = /\.(?:dump|bak|sqlite3?|parquet|sql\.gz)$/i;
 
 // The public conformance suite deliberately models a handoff document.
 const handoffContract =
-  "packages/policy-engine/tests/fixtures/contracts/S07/valid-handoff-and-adr.yaml";
+  "packages/sdk/tests/fixtures/contracts/S07/valid-handoff-and-adr.yaml";
 
 export function publicFileProblems(path, text) {
   const problems = [];

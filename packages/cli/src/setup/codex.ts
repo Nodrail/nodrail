@@ -5,7 +5,7 @@ import { observeCommand, usesLimits } from "./claude-code.ts";
 import { realpathSync } from "node:fs";
 import { codexMarketplace, codexPluginLines } from "./plugins.ts";
 import { join } from "node:path";
-import type { ProjectSetup, SetupAgent } from "@nodrail/policy-engine/yaml";
+import type { ProjectSetup, SetupAgent } from "@nodrail/sdk/yaml";
 import type { Env } from "../config.ts";
 import type { CompiledContracts } from "../contracts/engine.ts";
 import {

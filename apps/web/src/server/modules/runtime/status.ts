@@ -4,7 +4,7 @@ import {
   descriptorDigest,
   redactPausedAction,
   type ActionStatus,
-} from "@nodrail/client/protocol";
+} from "@nodrail/sdk/protocol";
 import { z } from "zod";
 import { requestReference } from "@/contracts/v1/requests";
 import type { RunHoldDto } from "@/contracts/v1/runs";

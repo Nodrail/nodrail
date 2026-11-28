@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
-import { readHostCredential } from "@nodrail/policy-engine/command-line";
+import { readHostCredential } from "@nodrail/sdk/command-line";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
 import { expect, test, vi } from "vitest";
@@ -17,7 +17,7 @@ import { POST as start } from "@/app/api/v1/runtime/budgets/start/route";
 import { withWorkspace } from "@/server/db/context";
 import { listAgents, pauseAgent, resumeAgent } from "@/server/modules/agents";
 import { createApiToken } from "@/server/modules/api-tokens";
-import { runHook as runPlugin } from "../../../../packages/client/src/hooks";
+import { runHook as runPlugin } from "../../../../packages/sdk/src/client/hooks";
 import { createWorkspace, useDatabase } from "./world";
 
 useDatabase();

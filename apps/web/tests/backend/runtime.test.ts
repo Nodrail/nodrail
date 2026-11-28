@@ -5,7 +5,7 @@ import {
   nonceDigest,
   type ActionStatus,
   type PermitAllow,
-} from "@nodrail/client/protocol";
+} from "@nodrail/sdk/protocol";
 import { describe, expect, test } from "vitest";
 import type { RuleInput } from "@/contracts/v1/policies";
 import {

@@ -12,7 +12,7 @@ export default async function setup() {
   execFileSync("pnpm", ["--filter", "@nodrail/cli", "build"], {
     stdio: "ignore",
   });
-  execFileSync("pnpm", ["--filter", "@nodrail/client", "build"], {
+  execFileSync("pnpm", ["--filter", "@nodrail/sdk", "build"], {
     stdio: "ignore",
   });
 }

@@ -7,7 +7,7 @@ import * as traces from "@/app/api/v1/otlp/v1/traces/route";
 import {
   encodeSpans,
   type SpanRecord,
-} from "../../../../packages/policy-engine/src/otlp";
+} from "../../../../packages/sdk/src/otlp";
 import type { Person, TestWorkspace } from "./world";
 
 export type { SpanRecord };

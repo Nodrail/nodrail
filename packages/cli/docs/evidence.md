@@ -1,6 +1,6 @@
 # Evidence (engine level 5)
 
-A gate can wait for **evidence**: the declared result of a check (tests, a QA pass, a scan) about the exact revision of the work. The grammar and the order of checks are the engine's ([`docs/contracts.md`](../../policy-engine/docs/contracts.md#evidence-requirements-enforced-engine-level-5), S05 on C01). This page covers the commands that produce evidence and what `plan` says about it.
+A gate can wait for **evidence**: the declared result of a check (tests, a QA pass, a scan) about the exact revision of the work. The grammar and the order of checks are the engine's ([`docs/contracts.md`](../../sdk/docs/contracts.md#evidence-requirements-enforced-engine-level-5), S05 on C01). This page covers the commands that produce evidence and what `plan` says about it.
 
 ```yaml
 - required_engine_version: 5
@@ -78,7 +78,7 @@ Git itself changes `.git` as usual: `git commit` names no path there.
 
 `plan` fails activation when the guard isn't on (for example a settings file that sets `disableAllHooks`): "runtime-observed evidence needs the setup guard". There is no command that records evidence from a file.
 
-**The trust boundary.** Local evidence is protected from the agent by the hook, not from the machine's owner: the ledger is a plain file the person can edit, as are the run and budget records ([runs](../../policy-engine/docs/runs.md), [budgets](budgets.md)). It proves what ran on this machine to the people who trust this machine, not attestation to anyone else. For evidence that holds beyond it, require `authority: externally-verified` from a verifier (below).
+**The trust boundary.** Local evidence is protected from the agent by the hook, not from the machine's owner: the ledger is a plain file the person can edit, as are the run and budget records ([runs](../../sdk/docs/runs.md), [budgets](budgets.md)). It proves what ran on this machine to the people who trust this machine, not attestation to anyone else. For evidence that holds beyond it, require `authority: externally-verified` from a verifier (below).
 
 `--policy <file>` reads one rule file instead of the project's locked policy.
 

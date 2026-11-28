@@ -4,20 +4,13 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { simulate } from "@nodrail/policy-engine";
-import { describeToolCall } from "@nodrail/policy-engine/actions";
-import {
-  compilePolicies,
-  renameAgents,
-  starterPacks,
-} from "@nodrail/policy-engine/yaml";
+import { simulate } from "@nodrail/sdk";
+import { describeToolCall } from "@nodrail/sdk/actions";
+import { compilePolicies, renameAgents, starterPacks } from "@nodrail/sdk/yaml";
 import { parse } from "yaml";
 import { describe, expect, test } from "vitest";
 import { bundledCatalog } from "../src/project/catalog.ts";
-import {
-  stepEvents,
-  type Step,
-} from "../../policy-engine/tests/support/run-events.ts";
+import { stepEvents, type Step } from "../../sdk/tests/support/run-events.ts";
 import { fakeIo } from "./support/fake-io.ts";
 
 const REPO = "acme/widgets";

@@ -3,7 +3,7 @@ import {
   permissionChanges,
   renderPermissionChanges,
   type ModuleUse,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import { spawnSync } from "node:child_process";
 import type { ContractsBaseline } from "../contracts/changes.ts";
 import { lineDiff } from "../diff.ts";

@@ -1,4 +1,4 @@
-import { claudeCodeHooks, governedTools } from "@nodrail/client/setup";
+import { claudeCodeHooks, governedTools } from "@nodrail/sdk/setup";
 
 export { governedTools };
 
@@ -18,7 +18,7 @@ export const environmentSnippet = (serverUrl: string) =>
 export const sdkEnvironmentSnippet = (serverUrl: string) =>
   `NODRAIL_URL="${serverUrl}"\nNODRAIL_CREDENTIAL="<the credential above>"`;
 
-export const frameworkSnippet = `import { guard } from "@nodrail/client";
+export const frameworkSnippet = `import { guard } from "@nodrail/sdk";
 
 // In your existing agent, wrap the tools you already pass. Nothing else changes.
 // Before: generateText({ model, tools, prompt })
@@ -27,7 +27,7 @@ const result = await generateText({ model, tools: guard(tools), prompt });
 // LangChain, OpenAI Agents, Mastra, LlamaIndex: the same, wherever you pass tools.
 const agent = createAgent({ model, tools: guard(tools) });`;
 
-export const customClientSnippet = `import { createNodrail } from "@nodrail/client";
+export const customClientSnippet = `import { createNodrail } from "@nodrail/sdk";
 
 const nodrail = createNodrail();
 

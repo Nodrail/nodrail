@@ -23,12 +23,12 @@ import {
   evidenceOf,
   type EvidenceContract,
   type PolicyDocument,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 import {
   checkValue,
   PAYLOAD_BYTES,
   projectShape,
-} from "@nodrail/policy-engine/contracts";
+} from "@nodrail/sdk/contracts";
 import {
   describeEvidence,
   evidenceShortfall,
@@ -36,8 +36,8 @@ import {
   readEvidence,
   recordEvidence,
   type EvidenceEvent,
-} from "@nodrail/policy-engine/ledger";
-import { cleanRevision, workRevision } from "@nodrail/policy-engine/revision";
+} from "@nodrail/sdk/ledger";
+import { cleanRevision, workRevision } from "@nodrail/sdk/revision";
 import { visibleLines } from "../api.ts";
 import { UsageError, type Io } from "../io.ts";
 import { readBounded } from "../read-bounded.ts";

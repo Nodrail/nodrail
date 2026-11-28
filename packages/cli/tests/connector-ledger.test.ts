@@ -5,8 +5,8 @@ import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { PassThrough } from "node:stream";
 import { join } from "node:path";
-import { budgetState, type PolicyBudget } from "@nodrail/policy-engine";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+import { budgetState, type PolicyBudget } from "@nodrail/sdk";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import { describe, expect, test } from "vitest";
 import { compileContracts } from "../src/contracts/engine.ts";
 import {
@@ -31,11 +31,7 @@ import {
 } from "../src/connectors/mediate.ts";
 import { outboxTool } from "../src/connectors/outbox.ts";
 import { serveMediated } from "../src/commands/connector.ts";
-import {
-  readRun,
-  record,
-  withRunLock,
-} from "../../policy-engine/src/ledger.ts";
+import { readRun, record, withRunLock } from "../../sdk/src/ledger.ts";
 
 const compiled = compileContracts({
   manifest: {

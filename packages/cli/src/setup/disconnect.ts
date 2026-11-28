@@ -7,7 +7,7 @@ import {
   enrollmentId,
   readHostCredential,
   removeHostCredential,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import { NodrailApi } from "../api.ts";
 import { resolveToken } from "../config.ts";
 import { CliError, type Io } from "../io.ts";

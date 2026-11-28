@@ -1,4 +1,4 @@
-import { DEFAULT_CONTROL_PLANE_URL } from "@nodrail/policy-engine/yaml";
+import { DEFAULT_CONTROL_PLANE_URL } from "@nodrail/sdk/yaml";
 /**
  * A small client for Nodrail's personal API (`/api/v1`, `ndp_` tokens). The
  * command line and the MCP server both use it, so each call is written once.

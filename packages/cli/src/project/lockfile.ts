@@ -3,7 +3,7 @@ import {
   ENGINE_VERSION,
   type Catalog,
   type ProjectResolution,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import { Document, isScalar, parse, Scalar, visit } from "yaml";
 import { z } from "zod";
 import { workspaceDigest, type Hashed } from "./workspace.ts";

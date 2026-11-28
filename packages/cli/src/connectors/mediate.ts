@@ -17,8 +17,8 @@ import {
   checkInput,
   checkValue,
   type InputCheck,
-} from "@nodrail/policy-engine/contracts";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+} from "@nodrail/sdk/contracts";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import {
   PAYLOAD_BYTES,
   projectValue,

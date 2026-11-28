@@ -2,10 +2,7 @@ import { chmodSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import {
-  readHostCredential,
-  telemetryId,
-} from "@nodrail/policy-engine/command-line";
+import { readHostCredential, telemetryId } from "@nodrail/sdk/command-line";
 import { z } from "zod";
 import { saveToken } from "../src/config.ts";
 import { appliedEnrollments } from "../src/setup/applied-enrollment.ts";

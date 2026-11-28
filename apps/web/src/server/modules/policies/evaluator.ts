@@ -6,7 +6,7 @@ import {
   type Descriptor,
   type EvaluatedRule,
   type Evaluation,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 
 export type {
   Condition,

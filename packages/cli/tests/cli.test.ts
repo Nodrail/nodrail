@@ -6,7 +6,7 @@ import {
   statSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { readSecretFile } from "@nodrail/policy-engine/command-line";
+import { readSecretFile } from "@nodrail/sdk/command-line";
 import { describe, expect, test } from "vitest";
 import { configPath } from "../src/config.ts";
 import { VERSION } from "../src/cli.ts";

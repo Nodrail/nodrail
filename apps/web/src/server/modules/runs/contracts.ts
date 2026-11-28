@@ -6,8 +6,8 @@ import {
   type RunContext,
   type SimulationInput,
   type SimulationResult,
-} from "@nodrail/policy-engine";
-import { HANDBACK_ACTION } from "@nodrail/policy-engine/protocol";
+} from "@nodrail/sdk";
+import { HANDBACK_ACTION } from "@nodrail/sdk/protocol";
 import {
   PAYLOAD_BYTES,
   checkValue,

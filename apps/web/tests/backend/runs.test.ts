@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, test } from "vitest";
-import type { ActionStatus } from "@nodrail/client/protocol";
+import type { ActionStatus } from "@nodrail/sdk/protocol";
 import { readWorkspace, withWorkspace } from "@/server/db/context";
 import { AuditEvent, PolicyVersion } from "@/server/db/entities";
 import { listActivity } from "@/server/modules/activity";

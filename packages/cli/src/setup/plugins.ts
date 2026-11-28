@@ -1,6 +1,6 @@
 import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import type { ProjectSetup, SetupPlugin } from "@nodrail/policy-engine/yaml";
+import type { ProjectSetup, SetupPlugin } from "@nodrail/sdk/yaml";
 import type { Env } from "../config.ts";
 import type { DesiredFile } from "./team-files.ts";
 

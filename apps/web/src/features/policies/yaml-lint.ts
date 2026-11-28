@@ -1,5 +1,5 @@
 // The browser-safe entry: `/yaml` also holds code that needs Node.
-import { compilePolicies } from "@nodrail/policy-engine/compile";
+import { compilePolicies } from "@nodrail/sdk/compile";
 import type {
   PolicyFileIssueDto,
   PolicyFilePreviewDto,

@@ -27,7 +27,7 @@ pnpm test
 
 The server and console live in `apps/web`. Source for the npm packages and
 agent plugins lives in `packages`. The plugin marketplace is built from
-`packages/agent-plugins` and `packages/client`.
+`packages/agent-plugins` and `packages/sdk`.
 
 The backend tests need a dedicated Postgres service and Mailpit. Start the
 development services with `docker compose -f apps/web/compose.yaml up -d
@@ -44,9 +44,9 @@ NODRAIL_TEST_DATABASE=nodrail_contrib NODRAIL_DEPLOYMENT=self-hosted pnpm test:b
 
 - Add a test for changed behavior. Keep the evaluator free of Node APIs and
   preserve the test vectors in
-  `packages/policy-engine/tests/fixtures/conformance-v1.json`.
+  `packages/sdk/tests/fixtures/conformance-v1.json`.
 - Test new `guard()` integrations with the framework's agent loop and a fake
-  model. Examples are in `packages/client/tests`.
+  model. Examples are in `packages/sdk/tests/client`.
 - Add a changeset with `pnpm changeset` for user-facing npm package changes.
   The Release workflow opens a version PR. After it merges, the release
   actor creates the package tags on the merged commit. Dispatch **Release**

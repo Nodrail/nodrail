@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { PolicyDocument } from "@nodrail/policy-engine";
-import { renderPolicies } from "@nodrail/policy-engine/yaml";
+import type { PolicyDocument } from "@nodrail/sdk";
+import { renderPolicies } from "@nodrail/sdk/yaml";
 import type { PolicyFileResultDto } from "@/contracts/v1/policies";
 import type { RunPolicyChange } from "@/contracts/v1/runs";
 import { AppError } from "@/server/db/context";

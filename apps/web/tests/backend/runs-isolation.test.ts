@@ -6,7 +6,7 @@ import { listActivity } from "@/server/modules/activity";
 import { createRule } from "@/server/modules/policies";
 import { previewPolicyFile } from "@/server/modules/policies/rule-files";
 import { requestPermit, submitAction } from "@/server/modules/runtime";
-import type { ActionStatus } from "@nodrail/client/protocol";
+import type { ActionStatus } from "@nodrail/sdk/protocol";
 import { getRun, listRuns } from "@/server/modules/runs";
 import { recordStep } from "@/server/modules/runs/steps";
 import {

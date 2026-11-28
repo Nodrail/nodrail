@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { EntityManager } from "typeorm";
 import { z } from "zod";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import {
   evidenceSubmitInput,
   type EvidenceStoredDto,

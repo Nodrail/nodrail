@@ -10,8 +10,8 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { readRun, runFile } from "@nodrail/policy-engine/ledger";
-import { spoolFolder } from "@nodrail/policy-engine/command-line";
+import { readRun, runFile } from "@nodrail/sdk/ledger";
+import { spoolFolder } from "@nodrail/sdk/command-line";
 import { CONNECT_FILE } from "../src/setup/connect.ts";
 import {
   codexTools,

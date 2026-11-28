@@ -1,5 +1,5 @@
 import "server-only";
-import type { Descriptor, RunContext, RunEvent } from "@nodrail/policy-engine";
+import type { Descriptor, RunContext, RunEvent } from "@nodrail/sdk";
 import { z } from "zod";
 import { IMPACT_DAYS } from "@/contracts/v1/policy-impact";
 import {
