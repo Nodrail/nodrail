@@ -4,7 +4,7 @@ The [marketplace](https://github.com/Nodrail/agent-plugins) is generated from
 [Nodrail/nodrail](https://github.com/Nodrail/nodrail). Open issues and pull
 requests in [the Nodrail monorepo](https://github.com/Nodrail/nodrail/issues).
 
-Check supported tool calls against the policy in your Nodrail control plane, self-hosted or Nodrail Cloud, before they run. Each call is allowed or denied at once, with the reason; nothing waits for a person. Your team keeps the agent runtime and provider credentials.
+Connect Claude Code and Codex to Nodrail, the open control plane for AI coding agents. With the plugin installed, every supported tool call is checked against your team's policy in your Nodrail server, self-hosted or Nodrail Cloud, before it runs, and shows up in the team's activity. Each call is allowed or denied at once, with the reason; nothing waits for a person. Your team keeps the agent runtime and provider credentials.
 
 These plugins use a Nodrail workspace credential and send each call to the control plane through its host API. To set up hosts from a repository instead, with the policy decided on the machine, declare them in `nodrail.yaml` and run `nodrail plan` and `nodrail apply` ([`@nodrail/cli`](https://www.npmjs.com/package/@nodrail/cli)). The project workflow supports Claude Code, Codex and GitHub Copilot CLI. For an existing plugin setup, follow the [upgrade to a repository connection](https://nodrail.com/docs/cli#upgrade-to-connect).
 

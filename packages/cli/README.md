@@ -1,11 +1,13 @@
 # @nodrail/cli
 
-Nodrail is the open control plane for AI agent development. This is its
-command line. Your repository holds the desired state: `nodrail.yaml`, the
-rules files it imports and `nodrail.lock.yaml`. `nodrail plan` shows what
-would change on each agent host (Claude Code, Codex, Copilot), and
-`nodrail apply` sets it up: the agents, their skills and connections, and a
-hook that allows or denies every action before it runs.
+Nodrail is the open control plane for AI coding agents, and `nodrail` is its
+command line. Your repository holds the desired state: `nodrail.yaml` declares
+the agents, their skills, the tools they connect to and the rules they work
+under, locked in `nodrail.lock.yaml`. `nodrail plan` shows what would change on
+each agent host (Claude Code, Codex, Copilot), and `nodrail apply` sets it up
+the same way on every machine, with a hook that checks every action before it
+runs. Connected to your Nodrail server, the team shares one policy and sees
+every run; `nodrail mcp` brings those runs to your assistant.
 
 ```sh
 nodrail example support-desk ./desk
