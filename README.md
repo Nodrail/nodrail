@@ -1,6 +1,8 @@
-# Nodrail: the open control plane for AI agent development
+# Nodrail: the open control plane for AI coding agents
 
-Nodrail keeps your agents' setup and rules in your repository and decides every agent action before it runs. `nodrail.yaml`, the rules files it imports and `nodrail.lock.yaml` are the desired state. `nodrail plan` shows what would change on each agent host (Claude Code, Codex, Copilot). `nodrail apply` sets it up, with a hook that allows or denies each action using the open engine. This is the source repository for the server and console, policy engine, CLI, TypeScript client, MCP server and agent plugins. Development, issues, pull requests, CI and releases live here.
+Nodrail runs your AI coding agents the way a control plane runs infrastructure. One `nodrail.yaml` in your repository declares the agents, their skills, the tools they connect to and the rules they work under, locked in `nodrail.lock.yaml`. `nodrail plan` shows what would change on each agent host (Claude Code, Codex, GitHub Copilot) and `nodrail apply` sets it up, the same way on every machine. Your Nodrail server, self-hosted or Nodrail Cloud, then holds the team's policy and shows each run: what every agent did, the decisions on its actions and the steps it reported.
+
+Every action goes through an open engine that allows or denies it before it runs, on the machine itself. This is the source repository for all of it: the server and console, the `nodrail` CLI, the `@nodrail/sdk` for your own agents and the Claude Code and Codex plugins. Development, issues, pull requests, CI and releases live here.
 
 [![CI](https://github.com/Nodrail/nodrail/actions/workflows/ci.yml/badge.svg)](https://github.com/Nodrail/nodrail/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Nodrail/nodrail/badge)](https://scorecard.dev/viewer/?uri=github.com/Nodrail/nodrail)

@@ -1,12 +1,18 @@
 # @nodrail/sdk
 
-The Nodrail SDK, for code. Compile, test and evaluate agent rules locally with
-the open engine at the core of [Nodrail](https://nodrail.com), the open control
-plane for AI agent development, and check each tool call against your Nodrail
-control plane, self-hosted or Nodrail Cloud. It includes the `nodrail-policy`
-command and the Claude Code and Codex hook. For people, the
-[`@nodrail/cli`](https://www.npmjs.com/package/@nodrail/cli) command line
-`nodrail` declares agents and rules and applies them.
+Build on [Nodrail](https://nodrail.com), the open control plane for AI coding
+agents, from your own code. Where the [`@nodrail/cli`](https://www.npmjs.com/package/@nodrail/cli)
+sets up Claude Code, Codex and Copilot from a `nodrail.yaml`, the SDK brings the
+same control to the agents you write yourself:
+
+- **Guard your agent's tools** with your Nodrail server, self-hosted or Nodrail
+  Cloud: Vercel AI SDK, LangChain and LangGraph, OpenAI Agents, MCP servers or
+  your own loop. Each call is allowed or denied before it runs.
+- **Record runs and steps** so your team sees what the agent did next to the
+  rest of its agents.
+- **Evaluate the same rules locally**, in tests and CI, with the open engine and
+  the `nodrail-policy` command. No account needed.
+- **Ship the hook** that Nodrail's Claude Code and Codex plugins run.
 
 `@nodrail/sdk` continues `@nodrail/policy-engine` and `@nodrail/client`: the
 same exports, subpaths and commands in one package. Replace both imports with

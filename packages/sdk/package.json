@@ -1,7 +1,7 @@
 {
   "name": "@nodrail/sdk",
   "version": "0.10.0",
-  "description": "The Nodrail SDK: compile, test and evaluate agent rules locally, and check each tool call against your Nodrail control plane, self-hosted or Nodrail Cloud. Includes the nodrail-policy command and the Claude Code and Codex hook.",
+  "description": "Build on Nodrail, the open control plane for AI coding agents, from your own code: guard the tools of your agents (Vercel AI SDK, LangChain, OpenAI Agents, MCP), record runs and steps, and evaluate the same rules locally or against your Nodrail server. Includes nodrail-policy and the Claude Code and Codex hook.",
   "keywords": [
     "ai",
     "agents",
