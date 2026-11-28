@@ -10,7 +10,9 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
-    directory: /
+    # The marketplace's workflows are generated from the template, so their
+    # pins are updated here, not in Nodrail/agent-plugins.
+    directories: [/, /scripts/marketplace/template]
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
     labels: [dependencies]
