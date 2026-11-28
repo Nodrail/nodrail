@@ -1,7 +1,7 @@
 import type { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
- * Declared contracts, reconciled with the engine's frozen grammar (packages/sdk/docs/contracts.md):
+ * Declared contracts, reconciled with the engine's frozen grammar (packages/policy-engine/docs/contracts.md):
  *
  * - digests are the engine's `sha256:<hex>`, never bare hex;
  * - the dialect is the grammar's number (1), not `shapes/v1`;
