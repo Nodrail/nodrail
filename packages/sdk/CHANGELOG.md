@@ -1,18 +1,18 @@
 # Changelog
 
 `@nodrail/sdk` continues `@nodrail/policy-engine` and `@nodrail/client`, which it
-replaces. Their changelogs up to 0.9.2 follow.
+replaces. Their changelogs up to 0.9.2 follow, and new versions go above.
 
 ## Before @nodrail/sdk: @nodrail/policy-engine
 
-### 0.9.2
+### @nodrail/policy-engine 0.9.2
 
 #### Patch Changes
 
 - d963ec8: Security hardening from the first CodeQL review of the public monorepo: local secret and evidence files are read through a checked file descriptor (no symlink or swap between check and read), receipt and Markdown parsing no longer use backtracking-prone patterns, and telemetry writes its status atomically and refuses redirects. First release built from Nodrail/nodrail.
 - 4384aaa: Point package metadata and documentation to the unified Nodrail repository.
 
-### 0.9.1
+### @nodrail/policy-engine 0.9.1
 
 - Exercise Windows DPAPI, POSIX permissions, Keychain and stale lock recovery on every test host.
 
@@ -28,7 +28,7 @@ replaces. Their changelogs up to 0.9.2 follow.
 
 - Keep UUID machine IDs intact in hooks and derive a matching enrollment and telemetry identity from legacy hex files.
 
-### 0.9.0
+### @nodrail/policy-engine 0.9.0
 
 One login, then `apply`: connected projects enroll each machine with its own
 origin-bound credential, detect the calling agent per session, and report to
@@ -43,7 +43,7 @@ Inventory without extra tokens.
 - Connected hooks use origin-bound enrollment, check pause on every covered call, and keep deciding with a verified lock during rollout. Decision reports omit arguments by default and distinguish would-deny verdicts.
 - Record the connected hook's latest policy check locally for nodrail status, including when it used cache or could not obtain policy.
 
-### 0.8.0
+### @nodrail/policy-engine 0.8.0
 
 The connected hook: a host decides with the control plane's published
 policy, shared budgets and evidence, and reports what it decided. 0.7.0 was
@@ -66,7 +66,7 @@ never published to npm; 0.8.0 includes its changes.
 - Decision reports and heartbeats send the policy digest used by the host. The
   hook warns when the cached file differs from `nodrail.lock.yaml`.
 
-### 0.7.0
+### @nodrail/policy-engine 0.7.0
 
 Nodrail is the open control plane for AI agent development. A rule
 only allows or denies: approvals are gone. The format has no other
@@ -128,7 +128,7 @@ name than Nodrail: `apiVersion: nodrail.com/v1alpha1`.
   notifications, and `approvalBinding`/`approvalStillBinds`. A file that
   still has them fails to compile and says they were removed.
 
-### 0.6.0
+### @nodrail/policy-engine 0.6.0
 
 #### Added
 
@@ -281,7 +281,7 @@ name than Nodrail: `apiVersion: nodrail.com/v1alpha1`.
   longer compiles: name rtk's own commands, such as `rtk gain`. See
   "Wrappers" in `docs/commands-and-tools.md`.
 
-### 0.5.2
+### @nodrail/policy-engine 0.5.2
 
 #### Fixed
 
@@ -291,7 +291,7 @@ name than Nodrail: `apiVersion: nodrail.com/v1alpha1`.
   has 5 s, and a timeout blocks the call with the reason ("git didn't answer
   within 5 s") and leaves a step unrecorded; the ledger never moves.
 
-### 0.5.1
+### @nodrail/policy-engine 0.5.1
 
 #### Fixed
 
@@ -303,7 +303,7 @@ name than Nodrail: `apiVersion: nodrail.com/v1alpha1`.
   read as "all spans kept". Every length is checked against what arrived;
   such an answer leaves the spans unknown, never sent.
 
-### 0.5.0
+### @nodrail/policy-engine 0.5.0
 
 GitHub Copilot CLI as a third host, and the reporting contract v2.
 
@@ -405,7 +405,7 @@ GitHub Copilot CLI as a third host, and the reporting contract v2.
   hosts; `runtime` is the host when there is only one. Both fields, or a host
   listed twice, is a problem.
 
-### 0.4.0
+### @nodrail/policy-engine 0.4.0
 
 #### Added
 
@@ -464,7 +464,7 @@ GitHub Copilot CLI as a third host, and the reporting contract v2.
   session was judged as `--agent`. A rule for that agent no longer covers its
   subagents' calls; give them their own rules.
 
-### 0.3.0
+### @nodrail/policy-engine 0.3.0
 
 Project manifests, a permission diff, and a safer reading of file paths.
 
@@ -505,7 +505,7 @@ io)`: `nodrail-policy` as a function, which `nodrail policy` runs.
   through it creates the target, which could otherwise pass a rule that
   protects that place, such as `repo-work`'s shell startup files.
 
-### 0.2.1
+### @nodrail/policy-engine 0.2.1
 
 Package metadata and documentation only; the engine, CLI and hook behave
 as in 0.2.0.
@@ -518,7 +518,7 @@ as in 0.2.0.
 - Gates, budgets and the `runs` command are marked as preview and name the
   engine release that has them.
 
-### 0.2.0
+### @nodrail/policy-engine 0.2.0
 
 Gates, budgets and receipts. Engine level 3.
 
@@ -621,12 +621,12 @@ Upgrading: change rules for starting a subagent to the new resource.
 - Both starter packs deny running `nodrail-policy` and `nodrail-claude-hook`
   from the shell. `repo-work` sends writes to `.npmrc` to a person.
 
-### 0.1.5
+### @nodrail/policy-engine 0.1.5
 
 No changes to the engine; released with `@nodrail/client` 0.1.5. Tests now
 fail if coverage drops.
 
-### 0.1.4
+### @nodrail/policy-engine 0.1.4
 
 Fixes from a third independent review.
 
@@ -647,7 +647,7 @@ Fixes from a third independent review.
 - New: `reachesSecret()` and `SECRET_PLACES` decide secret reads the way the
   starter packs do.
 
-### 0.1.3
+### @nodrail/policy-engine 0.1.3
 
 Fixes from a second independent review. Upgrade if you use the starter packs.
 
@@ -667,7 +667,7 @@ Fixes from a second independent review. Upgrade if you use the starter packs.
   4,096 characters and 256 levels, and resolved in linear time. A patch of
   more than 1,000 files can't be described, so a person reviews it.
 
-### 0.1.2
+### @nodrail/policy-engine 0.1.2
 
 Security fixes found by an independent review. Upgrade if you rely on the
 starter packs or on redaction.
@@ -690,18 +690,18 @@ starter packs or on redaction.
   use it declare `required_engine_version: 2`.
 - Types now work with `moduleResolution: nodenext`.
 
-### 0.1.1
+### @nodrail/policy-engine 0.1.1
 
 The first version published from GitHub Actions, with npm provenance: each
 release can be traced to the commit and workflow that built it. No code changes.
 
-### 0.1.0
+### @nodrail/policy-engine 0.1.0
 
 First public version: the evaluator, YAML rule files with lists, macros and layering, command and tool rules, the `nodrail-policy` command line, and the Claude Code hook.
 
 ## Before @nodrail/sdk: @nodrail/client
 
-### 0.9.2
+### @nodrail/client 0.9.2
 
 #### Patch Changes
 
@@ -711,7 +711,7 @@ First public version: the evaluator, YAML rule files with lists, macros and laye
 - Updated dependencies [4384aaa]
   - @nodrail/policy-engine@0.9.2
 
-### 0.9.1
+### @nodrail/client 0.9.1
 
 - Extend coverage of unreadable project contracts and refused hand-back receipts.
 
@@ -719,7 +719,7 @@ First public version: the evaluator, YAML rule files with lists, macros and laye
 
 - Ship the policy engine fix that keeps machine identity stable across enrollment and hook telemetry.
 
-### 0.9.0
+### @nodrail/client 0.9.0
 
 Uses `@nodrail/policy-engine` 0.9.0.
 
@@ -729,7 +729,7 @@ Uses `@nodrail/policy-engine` 0.9.0.
 
 - Plugin hooks pair runtime credentials with their own origin, carry caller metadata and use the installed engine hook for applied projects.
 
-### 0.8.0
+### @nodrail/client 0.8.0
 
 Uses `@nodrail/policy-engine` 0.8.0. 0.7.0 was never published to npm;
 0.8.0 includes its changes.
@@ -737,7 +737,7 @@ Uses `@nodrail/policy-engine` 0.8.0. 0.7.0 was never published to npm;
 - Add `policyIfChanged(etag?)` for conditional reads of the live policy.
   Existing SDK and standalone plugin authorization endpoints remain available.
 
-### 0.7.0
+### @nodrail/client 0.7.0
 
 Uses `@nodrail/policy-engine` 0.7.0. Nothing waits for a person any more:
 a call the rules don't allow is denied, with its reason.
@@ -772,7 +772,7 @@ a call the rules don't allow is denied, with its reason.
 - `@nodrail/client/hooks`: `runHook`, the hook the plugins ship, for a
   command line that runs it in-process (`nodrail connect hook`).
 
-### 0.6.0
+### @nodrail/client 0.6.0
 
 Uses `@nodrail/policy-engine` 0.6.0.
 
@@ -829,7 +829,7 @@ Uses `@nodrail/policy-engine` 0.6.0.
   Claude Code treats as no objection: a tool call is blocked (2), and any
   other event ends with 0 so a subagent can still stop.
 
-### 0.5.2
+### @nodrail/client 0.5.2
 
 #### Fixed
 
@@ -837,20 +837,20 @@ Uses `@nodrail/policy-engine` 0.6.0.
   call ("git didn't answer within 5 s"), since a budget couldn't count it
   without its run; a step event is left unrecorded.
 
-### 0.5.1
+### @nodrail/client 0.5.1
 
 Released with `@nodrail/policy-engine` 0.5.1, which it uses: the hook it
 bundles carries that version's two telemetry fixes. Otherwise the client
 behaves as in 0.5.0.
 
-### 0.5.0
+### @nodrail/client 0.5.0
 
 Released with `@nodrail/policy-engine` 0.5.0, which it uses. The hook it
 bundles judges GitHub Copilot CLI's calls (`--host copilot`) and sends
 decisions in the reporting contract v2; see the engine's changelog.
 Otherwise the client behaves as in 0.4.0.
 
-### 0.4.0
+### @nodrail/client 0.4.0
 
 Released with `@nodrail/policy-engine` 0.4.0, which it uses. The hook
 describes Codex's agent calls as that version does: starting one
@@ -859,12 +859,12 @@ describes Codex's agent calls as that version does: starting one
 `tool: codex` with their own operation. Before, they read as unknown Claude
 Code tools. Otherwise the client and its hook behave as in 0.3.0.
 
-### 0.3.0
+### @nodrail/client 0.3.0
 
 Released with `@nodrail/policy-engine` 0.3.0, which it uses; the client and its
 hook behave as in 0.2.1. Its dependencies are updated.
 
-### 0.2.1
+### @nodrail/client 0.2.1
 
 Package metadata and documentation only; the client and its hook behave
 as in 0.2.0.
@@ -875,7 +875,7 @@ as in 0.2.0.
 - The run-history walkthrough is marked as preview and names the client
   release that has `inRun` and `step`.
 
-### 0.2.0
+### @nodrail/client 0.2.0
 
 Runs and steps for any agent framework, so gates and budgets work outside
 Claude Code.
@@ -927,7 +927,7 @@ Claude Code.
 - Receipts are read from the last 16 KB of a message only, and a block over
   8 KB is no receipt, in the hook and in `receiptOf` alike, as in Cloud.
 
-### 0.1.5
+### @nodrail/client 0.1.5
 
 - New: `guardMcpServer(server)`. Every tool the server registers from then on
   is checked under the name it registers with, so a tool can't be guarded
@@ -936,14 +936,14 @@ Claude Code.
   before, it removed the check.
 - Tests now fail if coverage drops.
 
-### 0.1.4
+### @nodrail/client 0.1.4
 
 - Claude Code's reads (Read, Grep, Glob) are checked on the machine: one that
   reaches a place credentials live is blocked. Reads still aren't sent to
   Nodrail.
 - The fixes in `@nodrail/policy-engine` 0.1.4.
 
-### 0.1.3
+### @nodrail/client 0.1.3
 
 Fixes from a second independent review.
 
@@ -955,7 +955,7 @@ Fixes from a second independent review.
   of having only one checked. MCP task tools are refused until supported.
 - The fixes in `@nodrail/policy-engine` 0.1.3.
 
-### 0.1.2
+### @nodrail/client 0.1.2
 
 Security fixes found by an independent review. Upgrade.
 
@@ -971,12 +971,12 @@ Security fixes found by an independent review. Upgrade.
 - MCP SDK registered tools are supported.
 - Types now work with `moduleResolution: nodenext`.
 
-### 0.1.1
+### @nodrail/client 0.1.1
 
 The first version published from GitHub Actions, with npm provenance: each
 release can be traced to the commit and workflow that built it. No code changes.
 
-### 0.1.0
+### @nodrail/client 0.1.0
 
 First public version:
 
