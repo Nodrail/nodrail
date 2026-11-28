@@ -73,10 +73,46 @@ function record(directory, tag, name, version) {
   );
 }
 
+// What a package is built from: its own folder, the workspace packages it
+// bundles, and the root manifests and lockfile that resolve them.
+const buildInputs = [
+  "packages",
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+];
+
+/**
+ * npm checks the provenance against the run's OIDC identity, which names
+ * protected main at the dispatched commit. So the package is built from that
+ * commit, and only if its build inputs are identical to the tagged commit's:
+ * the provenance then names exactly what was built, and the tag still says
+ * what was released.
+ */
+function checkBuildMatchesTag(commit) {
+  const head = execFileSync("git", ["rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
+  if (head !== process.env.GITHUB_SHA)
+    throw new Error("Stage from the dispatched main commit.");
+  try {
+    execFileSync(
+      "git",
+      ["diff", "--quiet", commit, head, "--", ...buildInputs],
+      { stdio: "ignore" },
+    );
+  } catch {
+    throw new Error(
+      "Packages changed on main since the tag. Release a new version.",
+    );
+  }
+}
+
 function stage(directory, tag) {
   const { EXPECTED_SHA256: expected, RELEASE_COMMIT: commit } = process.env;
   if (!/^[a-f0-9]{40}$/.test(commit ?? ""))
     throw new Error("Staging requires the verified release commit.");
+  checkBuildMatchesTag(commit);
   if (expected && !/^[a-f0-9]{64}$/.test(expected))
     throw new Error("Expected a lowercase SHA-256 checksum.");
   const folder = mkdtempSync(join(tmpdir(), "nodrail-stage-"));
@@ -111,16 +147,7 @@ function stage(directory, tag) {
         "public",
         "--provenance",
       ],
-      {
-        stdio: "inherit",
-        // npm reads these values for the attestation's source dependency. OIDC
-        // still identifies the workflow running on protected main.
-        env: {
-          ...process.env,
-          GITHUB_SHA: commit,
-          GITHUB_REF: `refs/tags/${tag}`,
-        },
-      },
+      { stdio: "inherit" },
     );
     console.log(
       `${tag} accepted for staging. Find its stage ID with npm stage list.`,
