@@ -7,10 +7,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 import { policy } from "../src/commands/policy.ts";
-import { cli as nodrailPolicy } from "../../policy-engine/tests/run-cli.ts";
+import { cli as nodrailPolicy } from "../../sdk/tests/run-cli.ts";
 import { fakeIo } from "./support/fake-io.ts";
 
-const examples = new URL("../../policy-engine/examples/", import.meta.url);
+const examples = new URL("../../sdk/examples/", import.meta.url);
 // fileURLToPath, not .pathname, which on Windows gives /D:/… paths.
 const rules = fileURLToPath(new URL("rules", examples));
 const cases = fileURLToPath(new URL("cases.yaml", examples));

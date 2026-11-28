@@ -3,7 +3,7 @@ import {
   readHostCredential,
   saveMachineId,
   writeHostCredential,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import { CliError } from "../io.ts";
 import type { Place } from "../project/store.ts";
 import {

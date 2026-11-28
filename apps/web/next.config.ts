@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
   serverExternalPackages: ["typeorm"],
-  transpilePackages: ["@nodrail/client"],
+  transpilePackages: ["@nodrail/sdk"],
   // Inlined into server and browser code alike; see src/lib/product-path.ts.
   env: { NEXT_PUBLIC_SHORT_PRODUCT_URLS: shortProductUrls },
   experimental: {

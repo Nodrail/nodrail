@@ -11,7 +11,7 @@ import {
   type ProjectResolution,
   type ProjectSetup,
   type SetupAgent,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import { parse, parseAllDocuments, stringify } from "yaml";
 import { CliError } from "../io.ts";
 import {

@@ -1,6 +1,6 @@
 // What `nodrail evidence run`, `show` and `submit` share: their flags, and
 // the evidence's pinned contract in the policy.
-import type { EvidenceContract, PolicyDocument } from "@nodrail/policy-engine";
+import type { EvidenceContract, PolicyDocument } from "@nodrail/sdk";
 import { CliError } from "../io.ts";
 import { parseFlags } from "./subcommands.ts";
 

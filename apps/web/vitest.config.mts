@@ -17,7 +17,7 @@ export default defineConfig({
           environment: "node",
           include: [
             "tests/**/*.test.ts",
-            "../../packages/client/tests/**/*.test.ts",
+            "../../packages/sdk/tests/client/**/*.test.ts",
             "../../packages/agent-plugins/tests/**/*.test.ts",
           ],
           exclude: ["tests/backend/**"],

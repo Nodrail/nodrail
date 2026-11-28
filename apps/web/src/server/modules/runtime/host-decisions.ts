@@ -4,8 +4,8 @@ import {
   descriptorDigest,
   redactPausedAction,
   type ActionDescriptor,
-} from "@nodrail/client/protocol";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+} from "@nodrail/sdk/protocol";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import { lateHostReport, type DecisionCode } from "@/contracts/v1/activity";
 import {
   evaluationOfVerdict,

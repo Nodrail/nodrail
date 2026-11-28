@@ -1,7 +1,7 @@
 import type { Runtime } from "./state.ts";
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import type { ProjectSetup } from "@nodrail/policy-engine/yaml";
+import type { ProjectSetup } from "@nodrail/sdk/yaml";
 import type { DesiredSettings } from "./claude-code.ts";
 import { marketplaceName } from "./plugins.ts";
 

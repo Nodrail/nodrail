@@ -1,4 +1,4 @@
-import { actionDigest, descriptorDigest } from "@nodrail/client/protocol";
+import { actionDigest, descriptorDigest } from "@nodrail/sdk/protocol";
 import { getActionStatus } from "@/server/modules/runtime";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";

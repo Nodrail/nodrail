@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderPolicies } from "@nodrail/policy-engine/yaml";
+import { renderPolicies } from "@nodrail/sdk/yaml";
 import { groupOutline, outlineItems } from "@/features/policies/yaml-outline";
 
 describe("the YAML editor's groups", () => {

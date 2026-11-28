@@ -1,4 +1,4 @@
-import type { starterPacks } from "@nodrail/policy-engine/yaml";
+import type { starterPacks } from "@nodrail/sdk/yaml";
 import { captureEvent } from "@nodrail/web-shared/analytics/posthog";
 import type { ProductEvent } from "@nodrail/web-shared/analytics/sanitize";
 import type { AdapterKey } from "@/contracts/v1/agents";

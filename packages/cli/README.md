@@ -95,7 +95,7 @@ follow a policy once you activate an export for them.
 ## Policies (offline, no account)
 
 `nodrail policy` is
-[`nodrail-policy`](https://www.npmjs.com/package/@nodrail/policy-engine), the
+[`nodrail-policy`](https://www.npmjs.com/package/@nodrail/sdk), the
 policy engine's command: the same commands, flags, output and exit codes,
 with no token and nothing sent anywhere.
 

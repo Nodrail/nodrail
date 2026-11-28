@@ -8,7 +8,7 @@ import {
   valueAt,
   type ResolvedProperty,
   type ResolvedShape,
-} from "@nodrail/policy-engine/contracts";
+} from "@nodrail/sdk/contracts";
 import type { CallDetails, Execution, MediatedCall } from "./mediate.ts";
 
 /**

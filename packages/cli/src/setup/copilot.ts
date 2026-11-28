@@ -1,7 +1,7 @@
 import { launcherTail, launchShell, shellArg as quoted } from "./launcher.ts";
 import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import type { ProjectSetup, SetupAgent } from "@nodrail/policy-engine/yaml";
+import type { ProjectSetup, SetupAgent } from "@nodrail/sdk/yaml";
 import { stringify } from "yaml";
 import type { Env } from "../config.ts";
 import type { CompiledContracts } from "../contracts/engine.ts";

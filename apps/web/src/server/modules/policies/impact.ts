@@ -1,10 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import {
-  simulate,
-  type PolicyDocument,
-  type PolicyRule,
-} from "@nodrail/policy-engine";
+import { simulate, type PolicyDocument, type PolicyRule } from "@nodrail/sdk";
 import { z } from "zod";
 import { ruleInput } from "@/contracts/v1/policies";
 import {

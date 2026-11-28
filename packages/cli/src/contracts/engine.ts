@@ -1,5 +1,5 @@
 // The engine's declared contracts (dialect 1), in one place: its public
-// `@nodrail/policy-engine/contracts` subpath.
+// `@nodrail/sdk/contracts` subpath.
 export {
   ACCOUNTABLE_ENGINE_LEVEL,
   briefContracts,
@@ -27,4 +27,4 @@ export {
   type ResolvedProperty,
   type ResolvedShape,
   type ValueIssue,
-} from "@nodrail/policy-engine/contracts";
+} from "@nodrail/sdk/contracts";

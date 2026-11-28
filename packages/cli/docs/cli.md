@@ -340,17 +340,17 @@ Offline except `submit`, and run by a person, never an agent: the setup guard re
 
 ## Policy commands
 
-`nodrail policy <command>` is [`nodrail-policy <command>`](../../policy-engine/docs/cli.md), the command line of the open-source engine: the same commands, flags, output and exit codes. It uses no token.
+`nodrail policy <command>` is [`nodrail-policy <command>`](../../sdk/docs/cli.md), the command line of the open-source engine: the same commands, flags, output and exit codes. It uses no token.
 
 | Command                                      | Reference                                                            |
 | -------------------------------------------- | -------------------------------------------------------------------- |
-| `policy init <pack>`                         | [Commands and exit codes](../../policy-engine/docs/cli.md)           |
-| `policy validate`, `compile <rules>`         | [Commands and exit codes](../../policy-engine/docs/cli.md)           |
-| `policy eval <rules>`                        | [`eval`](../../policy-engine/docs/cli.md#eval)                       |
-| `policy test <rules> --cases <file>`         | [`test`](../../policy-engine/docs/cli.md#test)                       |
-| `policy check`, `exec <rules> -- <program>`  | [`check` and `exec`](../../policy-engine/docs/cli.md#check-and-exec) |
-| `policy hook <rules>`                        | [`hook`](../../policy-engine/docs/cli.md#hook)                       |
-| `policy runs [list \| show <run> \| report]` | [`runs`](../../policy-engine/docs/cli.md#runs)                       |
+| `policy init <pack>`                         | [Commands and exit codes](../../sdk/docs/cli.md)           |
+| `policy validate`, `compile <rules>`         | [Commands and exit codes](../../sdk/docs/cli.md)           |
+| `policy eval <rules>`                        | [`eval`](../../sdk/docs/cli.md#eval)                       |
+| `policy test <rules> --cases <file>`         | [`test`](../../sdk/docs/cli.md#test)                       |
+| `policy check`, `exec <rules> -- <program>`  | [`check` and `exec`](../../sdk/docs/cli.md#check-and-exec) |
+| `policy hook <rules>`                        | [`hook`](../../sdk/docs/cli.md#hook)                       |
+| `policy runs [list \| show <run> \| report]` | [`runs`](../../sdk/docs/cli.md#runs)                       |
 
 ```sh
 nodrail policy init repo-work > rules.yaml
@@ -360,9 +360,9 @@ nodrail policy check rules.yaml -- git status
 nodrail policy --help
 ```
 
-`nodrail-policy` keeps working. Hooks and plugins that run it by name need no change, and both answer Claude Code byte for byte alike. Installing `@nodrail/cli` doesn't put `nodrail-policy` on your path: install `@nodrail/policy-engine` too if something on your machine calls it.
+`nodrail-policy` keeps working. Hooks and plugins that run it by name need no change, and both answer Claude Code byte for byte alike. Installing `@nodrail/cli` doesn't put `nodrail-policy` on your path: install `@nodrail/sdk` too if something on your machine calls it.
 
-To use `nodrail` in the Claude Code hook, write `nodrail policy hook` where the [quickstart](../../policy-engine/docs/getting-started.md#connect-claude-code) writes `nodrail-policy hook`.
+To use `nodrail` in the Claude Code hook, write `nodrail policy hook` where the [quickstart](../../sdk/docs/getting-started.md#connect-claude-code) writes `nodrail-policy hook`.
 
 ## Control plane commands
 

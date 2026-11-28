@@ -1,5 +1,5 @@
 import "server-only";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import { z } from "zod";
 import {
   submitContractEventInput,

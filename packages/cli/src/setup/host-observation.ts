@@ -3,7 +3,7 @@ import {
   controlPlaneOrigin,
   hookCredential,
   readHookConnection,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import type { Io } from "../io.ts";
 import { CONNECT_FILE } from "./connect.ts";
 import { hostStatuses, observation, type Observation } from "./observe.ts";

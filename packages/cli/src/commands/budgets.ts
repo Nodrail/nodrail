@@ -8,7 +8,7 @@ import {
   BUDGET_LABELS,
   type NumericBudget,
   type PolicyDocument,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 import {
   ledgerDirectory,
   limitState,
@@ -20,7 +20,7 @@ import {
   settlements,
   withRunLock,
   type LimitState,
-} from "@nodrail/policy-engine/ledger";
+} from "@nodrail/sdk/ledger";
 import { visibleLines } from "../api.ts";
 import { CliError, UsageError, type Io } from "../io.ts";
 import { windowOf } from "../setup/accountable.ts";

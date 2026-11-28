@@ -16,7 +16,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
-import type { PluginSpec } from "@nodrail/policy-engine/yaml";
+import type { PluginSpec } from "@nodrail/sdk/yaml";
 import type { Env } from "../config.ts";
 import { CliError } from "../io.ts";
 

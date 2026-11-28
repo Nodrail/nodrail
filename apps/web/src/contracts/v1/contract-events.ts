@@ -1,4 +1,4 @@
-import type { JsonValue } from "@nodrail/client/protocol";
+import type { JsonValue } from "@nodrail/sdk/protocol";
 import { z } from "zod";
 import {
   MAX_EVENT_PAYLOAD_BYTES,

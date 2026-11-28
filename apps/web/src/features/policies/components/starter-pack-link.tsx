@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { starterPacks } from "@nodrail/policy-engine/yaml";
+import type { starterPacks } from "@nodrail/sdk/yaml";
 import { track } from "@/components/analytics/posthog";
 import { Button } from "@/components/ui/button";
 

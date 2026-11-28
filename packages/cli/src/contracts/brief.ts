@@ -4,8 +4,8 @@
 // give it (a final `nodrail-brief` block, or `key: value` lines for a
 // `format: header` brief), each property and an example that is read back
 // with the engine's own reader, the one the hook checks each dispatch with.
-import { agentName } from "@nodrail/policy-engine/hook-runs";
-import type { SetupTeam } from "@nodrail/policy-engine/yaml";
+import { agentName } from "@nodrail/sdk/hook-runs";
+import type { SetupTeam } from "@nodrail/sdk/yaml";
 import { CliError } from "../io.ts";
 import {
   briefContracts,

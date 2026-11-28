@@ -7,7 +7,7 @@ import {
   type ActionDescriptor,
   type ActionStatus,
   type PermitResponse,
-} from "@nodrail/client/protocol";
+} from "@nodrail/sdk/protocol";
 import {
   PERMIT_TTL_SECONDS,
   heartbeatInput,

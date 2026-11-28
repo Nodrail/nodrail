@@ -1,5 +1,5 @@
-import type { ProjectSetup } from "@nodrail/policy-engine/yaml";
-import { secretName, secretValue } from "@nodrail/policy-engine/command-line";
+import type { ProjectSetup } from "@nodrail/sdk/yaml";
+import { secretName, secretValue } from "@nodrail/sdk/command-line";
 import { DEFAULT_URL } from "../api.ts";
 import { normalizeUrl, resolveUrl, type Env } from "../config.ts";
 import { LOCK_FILE } from "../project/lockfile.ts";

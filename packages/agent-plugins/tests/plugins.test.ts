@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { claudeCodeHooks, codexHooks } from "../../client/src/setup";
+import { claudeCodeHooks, codexHooks } from "../../sdk/src/client/setup";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const json = (path: string) =>

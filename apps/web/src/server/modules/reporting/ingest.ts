@@ -1,5 +1,5 @@
 import "server-only";
-import type { ReceivedSpans } from "@nodrail/policy-engine";
+import type { ReceivedSpans } from "@nodrail/sdk";
 import type { z } from "zod";
 import { CONTRACT_REPORTING_SCHEMA } from "@/contracts/v1/declared-contracts";
 import { MAX_SPANS_PER_EXPORT } from "@/contracts/v1/inventory";

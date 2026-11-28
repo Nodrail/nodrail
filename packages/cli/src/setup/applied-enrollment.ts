@@ -3,7 +3,7 @@ import {
   readSecretFile,
   removeSecretFile,
   writeSecretFile,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import { basename, join } from "node:path";
 import { z } from "zod";
 import {

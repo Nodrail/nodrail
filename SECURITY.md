@@ -20,7 +20,7 @@ we fix it, and credit you in the advisory unless you'd rather we didn't.
 
 - A governed tool or command runs without a fresh, exact allow.
 - A rule matches something it shouldn't, or misses something it should, in a way
-  the [rules documentation](packages/policy-engine/docs/rules.md) doesn't describe.
+  the [rules documentation](packages/sdk/docs/rules.md) doesn't describe.
 - The hook lets a call through when Nodrail can't be reached, refuses the
   credential, or times out.
 - A secret or file content reaches Nodrail when the documentation says it doesn't.
@@ -29,7 +29,7 @@ we fix it, and credit you in the advisory unless you'd rather we didn't.
   deployment. Include the affected server version and remove credentials and
   private policy or run data from attachments.
 
-The [security model](packages/policy-engine/docs/security-model.md) and the
+The [security model](packages/sdk/docs/security-model.md) and the
 client's **Limits** list what isn't guaranteed. Those aren't vulnerabilities, but
 we'd still like to hear about ways to make them smaller.
 

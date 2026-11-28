@@ -2,11 +2,11 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { compilePolicies } from "@nodrail/policy-engine/yaml";
-import { simulate } from "@nodrail/policy-engine";
+import { compilePolicies } from "@nodrail/sdk/yaml";
+import { simulate } from "@nodrail/sdk";
 import { describe, expect, test } from "vitest";
 import { stagingFolder } from "../src/project/store.ts";
-import { stepEvents } from "../../policy-engine/tests/support/run-events.ts";
+import { stepEvents } from "../../sdk/tests/support/run-events.ts";
 import { heldByAnother, killed } from "./support/writers.ts";
 import { projectFolder } from "./support/project-folder.ts";
 

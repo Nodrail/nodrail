@@ -79,7 +79,7 @@ allows it, each start is denied.
 For a subagent to report a verdict, end its definition (for example
 `.claude/agents/qa.md`) with an instruction to finish its final message with a
 `nodrail-receipt` block, such as `verdict: pass`, and nothing after it. See
-[Runs, gates and budgets (preview)](https://github.com/Nodrail/nodrail/blob/main/packages/policy-engine/docs/runs.md#receipts).
+[Runs, gates and budgets (preview)](https://github.com/Nodrail/nodrail/blob/main/packages/sdk/docs/runs.md#receipts).
 
 A patch that touches several files, or renames one, is its own operation (tool
 `files`, operation `file.patch`), so a rule for one folder can't let a second
@@ -125,12 +125,12 @@ person.
 ## How it's built
 
 Both plugins run the same file, `hooks/nodrail-hook.mjs`: the hook from
-[`@nodrail/client`](https://github.com/Nodrail/nodrail/tree/main/packages/client),
+[`@nodrail/sdk`](https://github.com/Nodrail/nodrail/tree/main/packages/sdk),
 bundled into one file with no dependencies so nothing else needs installing. Its
 source, tests and changelog live there. `node scripts/check.mjs` checks that the
 manifests agree and that the hook blocks when it isn't configured.
 
-Plugin versions follow the client. See the
+Plugin versions follow the SDK. See the
 [Nodrail releases](https://github.com/Nodrail/nodrail/releases).
 
 Two checks run in CI. One proves the hook is byte for byte the one in

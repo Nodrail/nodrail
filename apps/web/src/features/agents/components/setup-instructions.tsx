@@ -46,7 +46,7 @@ export function SetupInstructions({
     return (
       <Instructions>
         <h3>1. Install the SDK and set its environment</h3>
-        <Snippet label="Install the SDK" text="npm install @nodrail/client" />
+        <Snippet label="Install the SDK" text="npm install @nodrail/sdk" />
         <Snippet
           label="SDK environment"
           text={sdkEnvironmentSnippet(serverUrl)}
@@ -87,7 +87,7 @@ function ClaudeCodeInstructions({ serverUrl }: { serverUrl: string }) {
       <Disclosure summary="Set the hook up by hand">
         <Snippet
           label="Install the Claude Code hook"
-          text="npm install -g @nodrail/client"
+          text="npm install -g @nodrail/sdk"
         />
         <FormHint>
           Use Node.js 22 or later. Put <code>nodrail-claude-hook</code> on your

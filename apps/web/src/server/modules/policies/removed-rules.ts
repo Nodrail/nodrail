@@ -1,5 +1,5 @@
 import "server-only";
-import { catalogRuleIds, compilePolicies } from "@nodrail/policy-engine/yaml";
+import { catalogRuleIds, compilePolicies } from "@nodrail/sdk/yaml";
 import type { PolicyRule } from "@/server/db/entities";
 import { logicalIdFor } from "./logical-id";
 

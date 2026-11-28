@@ -6,7 +6,7 @@ import {
   type ProjectHost,
   type PolicySource,
   type ProjectResolution,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import {
   asOnDisk,
   contractHost,

@@ -9,8 +9,8 @@ import type {
   PolicyDocument,
   RunContext,
   SimulationResult,
-} from "@nodrail/policy-engine";
-import { compilePolicies } from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk";
+import { compilePolicies } from "@nodrail/sdk/yaml";
 import { beforeAll, describe, expect, test } from "vitest";
 import { decideHandback } from "@/server/modules/runs/contracts";
 import { readWorkspace, withWorkspace } from "@/server/db/context";

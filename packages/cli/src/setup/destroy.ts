@@ -1,4 +1,4 @@
-import { removeAppliedHook } from "@nodrail/policy-engine/command-line";
+import { removeAppliedHook } from "@nodrail/sdk/command-line";
 import { HOST_NAMES } from "./state.ts";
 import { existsSync, readdirSync, readFileSync, rmdirSync } from "node:fs";
 import { dirname, join } from "node:path";

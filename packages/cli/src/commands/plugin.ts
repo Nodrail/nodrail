@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { pluginsField, type PluginSpec } from "@nodrail/policy-engine/yaml";
+import { pluginsField, type PluginSpec } from "@nodrail/sdk/yaml";
 import { parse } from "yaml";
 import type { Command } from "../context.ts";
 import { CliError, UsageError } from "../io.ts";

@@ -3,7 +3,7 @@
 // read), a numeric budget (its label, source, window and scope, and why it
 // can't be activated locally), and the evidence binding itself. Declared
 // values only; nothing runs.
-import { BUDGET_LABELS } from "@nodrail/policy-engine";
+import { BUDGET_LABELS } from "@nodrail/sdk";
 import type { CompiledContracts } from "./engine.ts";
 
 type Item = Record<string, unknown>;

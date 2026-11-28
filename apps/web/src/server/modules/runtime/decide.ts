@@ -1,6 +1,6 @@
 import "server-only";
-import type { ActionDescriptor } from "@nodrail/client/protocol";
-import type { Descriptor, SimulationResult } from "@nodrail/policy-engine";
+import type { ActionDescriptor } from "@nodrail/sdk/protocol";
+import type { Descriptor, SimulationResult } from "@nodrail/sdk";
 import { AppError, type RuntimeContext } from "@/server/db/context";
 import {
   decideInRun,

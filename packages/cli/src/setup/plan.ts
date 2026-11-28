@@ -1,10 +1,7 @@
 import { hasLegacySetup, LEGACY_HINT } from "./legacy.ts";
 import { launcherCheck } from "./launcher.ts";
 import { HOST_NAMES } from "./state.ts";
-import type {
-  ProjectSetup,
-  SetupConnection,
-} from "@nodrail/policy-engine/yaml";
+import type { ProjectSetup, SetupConnection } from "@nodrail/sdk/yaml";
 import { frozenPolicy, setupOf } from "../commands/project.ts";
 import type { Preview } from "../api.ts";
 import type { Env } from "../config.ts";

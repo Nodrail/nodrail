@@ -1,6 +1,6 @@
 import "server-only";
-import { hasContracts, type PolicyDocument } from "@nodrail/policy-engine";
-import { renderPolicies } from "@nodrail/policy-engine/yaml";
+import { hasContracts, type PolicyDocument } from "@nodrail/sdk";
+import { renderPolicies } from "@nodrail/sdk/yaml";
 import { isMap, isSeq, parseDocument } from "yaml";
 import { VERSION_NOT_RENDERABLE_MESSAGE } from "@/contracts/v1/policies";
 import { AppError } from "@/server/db/context";

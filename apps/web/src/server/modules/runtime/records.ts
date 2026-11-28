@@ -1,5 +1,5 @@
 import "server-only";
-import { actionDigest, type ActionDescriptor } from "@nodrail/client/protocol";
+import { actionDigest, type ActionDescriptor } from "@nodrail/sdk/protocol";
 import { REQUEST_TTL_MINUTES } from "@/contracts/v1/requests";
 import type { RunHoldDto } from "@/contracts/v1/runs";
 import { type RuntimeContext } from "@/server/db/context";

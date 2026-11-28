@@ -16,7 +16,7 @@ import {
   startSender,
   wakeSender,
   type SpanRecord,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import type { Env } from "../config.ts";
 import { isObserveHook } from "./claude-code.ts";
 import { TELEMETRY_FILE } from "./connections.ts";

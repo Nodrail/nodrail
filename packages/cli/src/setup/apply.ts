@@ -1,4 +1,4 @@
-import { recordAppliedHook } from "@nodrail/policy-engine/command-line";
+import { recordAppliedHook } from "@nodrail/sdk/command-line";
 import { SETTINGS_FILE } from "./claude-code.ts";
 import type { Env } from "../config.ts";
 import { CliError } from "../io.ts";

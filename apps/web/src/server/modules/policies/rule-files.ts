@@ -7,12 +7,12 @@ import { projectPinsCurrent } from "./project-pin-status";
 import { validateProjectBindings } from "./project-bindings";
 import { policyOwner, takeoverHosts } from "./project-owner";
 import { projectAgentTargets } from "@/server/modules/agents/project-agents";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
+import { fingerprint } from "@nodrail/sdk/protocol";
 import {
   compilePolicies,
   type CompileResult,
   type PolicyIssue,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import {
   POLICY_FILE_MAX_BYTES,
   type PolicyFilePreviewDto,

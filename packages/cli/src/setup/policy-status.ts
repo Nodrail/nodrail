@@ -1,8 +1,5 @@
 import { join } from "node:path";
-import {
-  POLICY_CHECK_FILE,
-  spoolFolder,
-} from "@nodrail/policy-engine/command-line";
+import { POLICY_CHECK_FILE, spoolFolder } from "@nodrail/sdk/command-line";
 import { frozenPolicy } from "../commands/project.ts";
 import { describeFailure } from "../io.ts";
 import { CONNECT_FILE } from "./connect.ts";

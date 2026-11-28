@@ -1,4 +1,4 @@
-import type { Runtime, Tested } from "@nodrail/policy-engine/yaml";
+import type { Runtime, Tested } from "@nodrail/sdk/yaml";
 import { VERSION } from "../version.ts";
 
 /** What runs here, as `tested` names it. */

@@ -2,7 +2,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 
-const npmTag = /^@nodrail\/(policy-engine|client|cli)@/;
+const npmTag = /^@nodrail\/(sdk|cli)@/;
 const semver =
   /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const git = (...args) =>

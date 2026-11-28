@@ -1,9 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type {
-  PolicyBudget,
-  PolicyGate,
-  Requirement,
-} from "@nodrail/policy-engine";
+import type { PolicyBudget, PolicyGate, Requirement } from "@nodrail/sdk";
 import {
   computeReport,
   type ReportAction,

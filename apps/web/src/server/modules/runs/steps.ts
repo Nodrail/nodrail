@@ -1,6 +1,6 @@
 import "server-only";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
-import { parseReceipt } from "@nodrail/policy-engine/receipts";
+import { fingerprint } from "@nodrail/sdk/protocol";
+import { parseReceipt } from "@nodrail/sdk/receipts";
 import type { z } from "zod";
 import { runInput, stepInput } from "@/contracts/v1/runtime";
 import type {

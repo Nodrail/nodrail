@@ -4,7 +4,7 @@ import {
   checkPolicyArgs,
   runPolicyCommandLine,
   type Io as EngineIo,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import type { Io } from "../io.ts";
 import {
   checkExportArgs,

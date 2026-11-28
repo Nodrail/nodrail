@@ -1,6 +1,6 @@
 import "server-only";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
-import type { PolicyDocument } from "@nodrail/policy-engine";
+import { fingerprint } from "@nodrail/sdk/protocol";
+import type { PolicyDocument } from "@nodrail/sdk";
 import type { RunPolicy } from "@/server/modules/runs/history";
 
 // Gates and budgets of a rules file, as a policy version stores them.

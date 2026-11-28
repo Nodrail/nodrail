@@ -15,7 +15,7 @@ import { checkMcp } from "./verify-mcp.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cli = resolve(here, "..");
-const engine = resolve(cli, "../policy-engine");
+const engine = resolve(cli, "../sdk");
 const { version: expected } = JSON.parse(
   readFileSync(join(cli, "package.json"), "utf8"),
 );
@@ -136,20 +136,19 @@ if (typeof main !== "function") throw new Error("main");
 
 /** `nodrail policy` answers exactly what the installed nodrail-policy does. */
 function checkPolicy(folder) {
-  const rules = "node_modules/@nodrail/policy-engine/examples/rules";
+  const rules = "node_modules/@nodrail/sdk/examples/rules";
   const both = (args, input = "") =>
-    [
-      ["node_modules/@nodrail/policy-engine/dist/cli.js"],
-      [installedCli, "policy"],
-    ].map((entry) => {
-      const ran = spawnSync(process.execPath, [...entry, ...args], {
-        cwd: folder,
-        encoding: "utf8",
-        env: testEnv(folder),
-        input,
-      });
-      return JSON.stringify([ran.status, ran.stdout, ran.stderr]);
-    });
+    [["node_modules/@nodrail/sdk/dist/cli.js"], [installedCli, "policy"]].map(
+      (entry) => {
+        const ran = spawnSync(process.execPath, [...entry, ...args], {
+          cwd: folder,
+          encoding: "utf8",
+          env: testEnv(folder),
+          input,
+        });
+        return JSON.stringify([ran.status, ran.stdout, ran.stderr]);
+      },
+    );
   const event = (command) =>
     JSON.stringify({
       hook_event_name: "PreToolUse",

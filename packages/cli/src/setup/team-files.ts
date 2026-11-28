@@ -13,7 +13,7 @@ import {
   type ProjectSetup,
   type SetupAgent,
   type SetupTeam,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 
 /** Where the effective policy goes, for the hook to read. */
 export const EFFECTIVE_FILE = ".nodrail/effective.yaml";

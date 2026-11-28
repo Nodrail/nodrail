@@ -5,7 +5,7 @@ import {
   compilePolicies,
   type ProjectSetup,
   type SetupAgent,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import { evidenceRead } from "./accountable.ts";
 import { hookReads, mcpServerEntries } from "./connections.ts";
 import { connectRead } from "./connect.ts";

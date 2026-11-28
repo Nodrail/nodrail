@@ -4,7 +4,7 @@ import {
   readSecretFile,
   removeSecretFile,
   writeSecretFile,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import { DEFAULT_URL } from "./api.ts";
 import { CliError } from "./io.ts";
 

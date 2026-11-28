@@ -15,7 +15,7 @@ import {
  * Declared contracts in Cloud and self-hosted deployments: the immutable
  * contracts and reporting projections a workspace knows, their bindings, and the
  * validated events that name them. The grammar is the policy engine's
- * (packages/policy-engine/docs/contracts.md): a resolved shape here is the
+ * (packages/sdk/docs/contracts.md): a resolved shape here is the
  * engine's, and its digest is the engine's, recomputed by the server before
  * anything is kept.
  *

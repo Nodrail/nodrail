@@ -25,7 +25,7 @@ Read the [CLI README](packages/cli/README.md) for `nodrail.yaml`, the catalog an
 Install the engine with Node.js 22 or later.
 
 ```sh
-npm install -g @nodrail/policy-engine
+npm install -g @nodrail/sdk
 ```
 
 In an empty directory, save this as `rules.yaml`.
@@ -52,8 +52,8 @@ The two evaluations print `allow` and `deny`. Both commands inside the quotes ar
 
 The Claude Code local hook reads your rules before covered tools run. You can also compile the file in your own harness, map proposed calls to action descriptors and invoke the tool only after a matching allow. Portability depends on the actions and facts the integration supplies.
 
-- [Connect the local Claude Code hook](packages/policy-engine/docs/getting-started.md).
-- [Embed the evaluator](packages/policy-engine/docs/library.md) or use the [published test cases](packages/policy-engine/tests/fixtures/conformance-v1.json) when building a compatible evaluator.
+- [Connect the local Claude Code hook](packages/sdk/docs/getting-started.md).
+- [Embed the evaluator](packages/sdk/docs/library.md) or use the [published test cases](packages/sdk/tests/fixtures/conformance-v1.json) when building a compatible evaluator.
 - [Check integration coverage](https://nodrail.com/integrations), including the Codex plugin.
 
 ## GitHub merge check (pilot)
@@ -62,12 +62,11 @@ We used the engine in a local adapter to evaluate QA evidence for a pull request
 
 ## Packages
 
-| Package                                            | When to use it                                                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| [`@nodrail/cli`](packages/cli)                     | Declare agents and rules in `nodrail.yaml`, then plan and apply them on Claude Code, Codex and Copilot.       |
-| [`@nodrail/policy-engine`](packages/policy-engine) | Compile and evaluate rules locally, test them in CI or decide calls in your own harness. No account required. |
-| [`@nodrail/client`](packages/client)               | Check wrapped tools against the policy in your Nodrail control plane, self-hosted or Nodrail Cloud.           |
-| [`@nodrail/agent-plugins`](packages/agent-plugins) | Build the plugins distributed through the [generated marketplace](https://github.com/Nodrail/agent-plugins).  |
+| Package                                            | When to use it                                                                                                                                                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@nodrail/cli`](packages/cli)                     | Declare agents and rules in `nodrail.yaml`, then plan and apply them on Claude Code, Codex and Copilot.                                                                                                           |
+| [`@nodrail/sdk`](packages/sdk)                     | Compile and evaluate rules locally, test them in CI or decide calls in your own harness, no account required. Check wrapped tools against the policy in your Nodrail control plane, self-hosted or Nodrail Cloud. |
+| [`@nodrail/agent-plugins`](packages/agent-plugins) | Build the plugins distributed through the [generated marketplace](https://github.com/Nodrail/agent-plugins).                                                                                                      |
 
 ## Connect a team workspace
 
@@ -90,12 +89,12 @@ this machine for the declared workspace and environment.
 Create a Nodrail credential in **Agents → Connect an agent**. Configure it as an environment secret on the server or CI runner where the tools run. Pass the guarded tools to your agent.
 
 ```ts
-import { guard } from "@nodrail/client";
+import { guard } from "@nodrail/sdk";
 
 const agent = createAgent({ model, tools: guard(tools) });
 ```
 
-This excerpt assumes your framework already supplies `createAgent`, `model` and `tools`. Read the [client quickstart](packages/client/README.md) for installation, credentials and supported tool shapes. For an existing coding agent, see the [Claude Code and Codex plugins](https://github.com/Nodrail/agent-plugins).
+This excerpt assumes your framework already supplies `createAgent`, `model` and `tools`. Read the [client quickstart](packages/sdk/README.md) for installation, credentials and supported tool shapes. For an existing coding agent, see the [Claude Code and Codex plugins](https://github.com/Nodrail/agent-plugins).
 
 ## Self-host the server
 
@@ -133,12 +132,12 @@ reset email.
 
 ## Enforcement and failure behavior
 
-The engine returns a decision. The harness controls execution. Code with a direct route to a tool can bypass the check. The client blocks a wrapped call when authorization fails or times out. Each plugin documents the behavior of its runtime when the hook itself cannot start. [Security model](packages/policy-engine/docs/security-model.md).
+The engine returns a decision. The harness controls execution. Code with a direct route to a tool can bypass the check. The client blocks a wrapped call when authorization fails or times out. Each plugin documents the behavior of its runtime when the hook itself cannot start. [Security model](packages/sdk/docs/security-model.md).
 
 ## Status
 
 Developer preview. The API may change before 1.0, following semantic versioning
-and the [changelogs](packages/client/CHANGELOG.md).
+and the [changelogs](packages/sdk/CHANGELOG.md).
 
 ## Contributing and security
 

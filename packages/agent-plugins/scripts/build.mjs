@@ -1,12 +1,12 @@
 // Puts the one-file hook in each plugin, writes the hook declarations, and gives
-// each plugin the version of @nodrail/client, whose hook it ships.
+// each plugin the version of @nodrail/sdk, whose hook it ships.
 import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { claudeCodeHooks, codexHooks } from "../../client/dist/setup.js";
+import { claudeCodeHooks, codexHooks } from "../../sdk/dist/client/setup.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const hookFile = resolve(root, "../client/dist/nodrail-hook.mjs");
+const hookFile = resolve(root, "../sdk/dist/nodrail-hook.mjs");
 
 const plugins = {
   "claude-code": claudeCodeHooks({
@@ -26,7 +26,7 @@ for (const [name, hooks] of Object.entries(plugins)) {
 }
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
-const { version } = readJson(resolve(root, "../client/package.json"));
+const { version } = readJson(resolve(root, "../sdk/package.json"));
 for (const manifest of [
   "plugins/claude-code/.claude-plugin/plugin.json",
   "plugins/codex/.codex-plugin/plugin.json",

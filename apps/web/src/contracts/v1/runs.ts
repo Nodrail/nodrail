@@ -2,7 +2,7 @@ import {
   resourceScope,
   type Requirement,
   type ResourceScope,
-} from "@nodrail/policy-engine";
+} from "@nodrail/sdk";
 import { z } from "zod";
 import type { BudgetStandingDto } from "./budgets";
 import type { ContractEventDto } from "./contract-events";

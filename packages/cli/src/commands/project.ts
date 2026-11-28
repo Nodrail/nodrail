@@ -4,7 +4,7 @@ import {
   ENGINE_VERSION,
   parseModuleRef,
   type CatalogModule,
-} from "@nodrail/policy-engine/yaml";
+} from "@nodrail/sdk/yaml";
 import { parse } from "yaml";
 import type { Command } from "../context.ts";
 import { CliError, UsageError, type Io } from "../io.ts";

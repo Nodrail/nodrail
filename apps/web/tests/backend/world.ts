@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import type { ActionStatus } from "@nodrail/client/protocol";
+import type { ActionStatus } from "@nodrail/sdk/protocol";
 import { afterAll, beforeAll, describe, vi } from "vitest";
 import { DataSource, type EntityManager, type QueryRunner } from "typeorm";
 import type { Role } from "@/contracts/v1/access";

@@ -1,8 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  enrollmentId,
-  readHostCredential,
-} from "@nodrail/policy-engine/command-line";
+import { enrollmentId, readHostCredential } from "@nodrail/sdk/command-line";
 import type { NodrailApi } from "../api.ts";
 import { generationOf } from "./applied-enrollment.ts";
 import type { SetupPlan } from "./plan.ts";

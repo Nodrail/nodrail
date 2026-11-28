@@ -1,4 +1,4 @@
-import type { Descriptor } from "@nodrail/policy-engine";
+import type { Descriptor } from "@nodrail/sdk";
 import { z } from "zod";
 
 /** The action a request describes, as every read of it needs it. */

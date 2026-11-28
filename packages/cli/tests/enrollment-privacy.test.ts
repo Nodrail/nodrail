@@ -14,7 +14,7 @@ import { join } from "node:path";
 import {
   readHostCredential,
   writeHostCredential,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import { expect, test, vi } from "vitest";
 import { configPath, resolveToken, saveToken } from "../src/config.ts";
 import { stagingFolder } from "../src/project/store.ts";

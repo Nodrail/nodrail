@@ -1,7 +1,7 @@
 import "server-only";
-import { contractDigest } from "@nodrail/policy-engine/contracts";
-import { fingerprint } from "@nodrail/policy-engine/protocol";
-import { compilePolicies, evidencePins } from "@nodrail/policy-engine/yaml";
+import { contractDigest } from "@nodrail/sdk/contracts";
+import { fingerprint } from "@nodrail/sdk/protocol";
+import { compilePolicies, evidencePins } from "@nodrail/sdk/yaml";
 import type { Declarations, ProjectApply } from "@/contracts/v1/project-apply";
 import { AppError, type WorkspaceContext } from "@/server/db/context";
 import { pinContracts } from "@/server/modules/contracts/registry";

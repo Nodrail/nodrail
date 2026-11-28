@@ -17,7 +17,7 @@ import {
   acquireLocalLock,
   LocalLockBusy,
   processAlive,
-} from "@nodrail/policy-engine/command-line";
+} from "@nodrail/sdk/command-line";
 import { LOCK_FILE, MANIFEST_FILE, sha256 } from "./lockfile.ts";
 
 /** The only files a project write ever replaces. */
