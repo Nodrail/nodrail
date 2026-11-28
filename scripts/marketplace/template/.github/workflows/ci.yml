@@ -25,7 +25,7 @@ jobs:
           node-version: 22
       - name: Manifests agree and the hook blocks when unconfigured
         run: node scripts/check.mjs
-      - name: The hook is the one published in @nodrail/client
+      - name: The hook is the one published in @nodrail/sdk
         run: node scripts/verify-hook.mjs
       # Exact versions with checksums, from tools/package-lock.json.
       - name: Install the pinned checking tools

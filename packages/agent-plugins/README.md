@@ -134,7 +134,7 @@ Plugin versions follow the SDK. See the
 [Nodrail releases](https://github.com/Nodrail/nodrail/releases).
 
 Two checks run in CI. One proves the hook is byte for byte the one in
-`@nodrail/client` of the same version on npm. The other, run on demand once
+`@nodrail/sdk` of the same version on npm. The other, run on demand once
 API keys are configured, runs real Claude Code and Codex sessions with the
 plugins installed, on Linux, macOS and Windows, against a mock Nodrail
 (`scripts/real-agents.mjs`), and checks that an allowed command runs, a denied

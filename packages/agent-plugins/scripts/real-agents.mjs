@@ -4,7 +4,7 @@
 //   node scripts/real-agents.mjs claude-code|codex
 //
 // Needs the agent's CLI, its API key (ANTHROPIC_API_KEY or OPENAI_API_KEY),
-// and NODRAIL_CLIENT_DIR pointing at an installed @nodrail/client. Spends a
+// and NODRAIL_SDK_DIR pointing at an installed @nodrail/sdk. Spends a
 // little on model tokens.
 import { spawn, spawnSync } from "node:child_process";
 import {
