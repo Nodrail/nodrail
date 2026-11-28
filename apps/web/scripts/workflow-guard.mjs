@@ -46,7 +46,10 @@ const workflows = new Map([
         stage: "inputs.operation == 'stage'",
         record: "inputs.operation == 'record'",
       },
-      pinned: ["stage", "record"],
+      // stage builds the dispatched main commit (npm provenance must name
+      // what was built); its script checks the packages match the tag's.
+      fullHistory: ["stage"],
+      pinned: ["record"],
     },
   ],
   [
@@ -122,6 +125,7 @@ function safeStep(step, checkoutOptions) {
 
 function checkoutPolicy(policy, name) {
   if (policy.releaseKind && name === "verify") return { "fetch-depth": 0 };
+  if (policy.fullHistory?.includes(name)) return { "fetch-depth": 0 };
   if (policy.pinned?.includes(name))
     return { ref: "${{ needs.verify.outputs.commit }}" };
   return {};
