@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.2
+
+### Patch Changes
+
+- d963ec8: Security hardening from the first CodeQL review of the public monorepo: local secret and evidence files are read through a checked file descriptor (no symlink or swap between check and read), receipt and Markdown parsing no longer use backtracking-prone patterns, and telemetry writes its status atomically and refuses redirects. First release built from Nodrail/nodrail.
+- 4384aaa: Point package metadata and documentation to the unified Nodrail repository.
+- Updated dependencies [d963ec8]
+- Updated dependencies [4384aaa]
+  - @nodrail/policy-engine@0.9.2
+
 ## 0.9.1
 
 - Extend coverage of unreadable project contracts and refused hand-back receipts.
